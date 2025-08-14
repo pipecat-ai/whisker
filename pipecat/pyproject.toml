@@ -1,0 +1,75 @@
+[build-system]
+requires = ["setuptools>=64", "setuptools_scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pipecat-ai-whisker"
+dynamic = ["version"]
+description = "A real-time debugger for Pipecat"
+license = "BSD-2-Clause"
+license-files = ["LICENSE"]
+readme = "README.md"
+requires-python = ">=3.10"
+keywords = ["pipecat", "debug", "ai"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Topic :: Communications :: Conferencing",
+    "Topic :: Multimedia :: Sound/Audio",
+    "Topic :: Multimedia :: Video",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence"
+]
+dependencies = [
+    "loguru~=0.7.3",
+    "pipecat-ai>=0.0.81",
+    "websockets>=13.1,<15.0",
+]
+
+[project.urls]
+Source = "https://github.com/pipecat-ai/whisker"
+Website = "https://pipecat.ai"
+
+[dependency-groups]
+dev = [
+    "build~=1.2.2",
+    "pip-tools~=7.4.1",
+    "pre-commit~=4.2.0",
+    "pyright~=1.1.402",
+    "python-dotenv>=1.0.1,<2.0.0",
+    "ruff~=0.12.1",
+    "setuptools~=78.1.1",
+    "setuptools_scm~=8.3.1",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"pipecat_whisker" = ["py.typed"]
+
+[tool.setuptools_scm]
+local_scheme = "no-local-version"
+fallback_version = "0.0.0-dev"
+root = ".."
+
+[tool.ruff]
+exclude = [".git"]
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "D", # Docstring rules
+    "I", # Import rules
+]
+ignore = [
+    "D105",  # Missing docstring in magic methods (__str__, __repr__, etc.)
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Skip docstring checks for non-source code
+"examples/**/*.py" = ["D"]
+# Skip D104 (missing docstring in public package) for __init__.py files
+"**/__init__.py" = ["D104"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
