@@ -20,7 +20,7 @@ With **Whisker** you can:
 
 Think of Whisker as **trace logging with batteries**.
 
-<p align="center"><img src="whisker-image.png" alt="Whisker" width="500"/></p>
+<p align="center"><img src="https://raw.githubusercontent.com/pipecat-ai/whisker/refs/heads/main/whisker-image.png" alt="Whisker" width="500"/></p>
 
 ## 🧭 Getting started
 
