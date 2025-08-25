@@ -36,7 +36,7 @@ from pipecat.pipeline.pipeline import Pipeline
 from pipecat.processors.aggregators.openai_llm_context import OpenAILLMContext
 from pipecat.processors.frame_processor import FrameProcessor
 from pydantic import BaseModel
-from websockets import ConnectionClosedOK, Server, ServerConnection, serve
+from websockets import ConnectionClosedOK, WebSocketServerProtocol, serve
 
 MAX_BATCH_SIZE_BYTES = 10000
 
@@ -113,8 +113,7 @@ class WhiskerObserver(BaseObserver):
         self._exclude_frames = exclude_frames
 
         self._id = 0
-        self._server: Optional[Server] = None
-        self._client: Optional[ServerConnection] = None
+        self._client: Optional[WebSocketServerProtocol] = None
         self._server_task = asyncio.create_task(self._start_task_handler())
         self._send_task = asyncio.create_task(self._send_task_handler())
         self._send_queue = asyncio.Queue()
@@ -123,9 +122,6 @@ class WhiskerObserver(BaseObserver):
     async def cleanup(self):
         """Clean up resources and close the Whisker server."""
         await super().cleanup()
-
-        if self._server:
-            self._server.close()
 
         if self._server_task:
             await self._server_task
@@ -153,11 +149,11 @@ class WhiskerObserver(BaseObserver):
 
         This method runs in a separate task and manages the websocket server lifecycle.
         """
-        self._server = await serve(self._server_handler, self._host, self._port)
-        logger.info(f"ᓚᘏᗢ Whisker running at ws://{self._host}:{self._port}")
-        await self._server.wait_closed()
+        async with serve(self._server_handler, self._host, self._port):
+            logger.debug(f"ᓚᘏᗢ Whisker running at ws://{self._host}:{self._port}")
+            await asyncio.get_running_loop().create_future()
 
-    async def _server_handler(self, client: ServerConnection):
+    async def _server_handler(self, client: WebSocketServerProtocol):
         """Handle a new Whisker client connection.
 
         Args:
@@ -181,7 +177,7 @@ class WhiskerObserver(BaseObserver):
         except Exception as e:
             logger.warning(f"ᓚᘏᗢ Whisker: client closed with error: {e}")
         finally:
-            logger.debug("ᓚᘏᗢ Whisker: client closed the connection")
+            logger.debug("ᓚᘏᗢ Whisker: client disconnected")
             self._client = None
 
     async def _send_task_handler(self):
