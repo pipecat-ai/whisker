@@ -53,7 +53,7 @@ def dataclass_serializer(obj: Any) -> Any:
     if is_dataclass(obj):
         return {k: dataclass_serializer(v) for k, v in asdict(obj).items() if v is not None}
     elif isinstance(obj, bytes):
-        return "..."
+        return "bytes(...)"
     elif isinstance(obj, (list, tuple, set)):
         return [dataclass_serializer(v) for v in obj if v is not None]
     elif isinstance(obj, dict):
@@ -62,7 +62,7 @@ def dataclass_serializer(obj: Any) -> Any:
         return obj.model_dump(exclude_none=True)
     elif isinstance(obj, OpenAILLMContext):
         return obj.get_messages()
-    elif isinstance(obj, (int, float, bool)):
+    elif isinstance(obj, (int, float, bool, str)):
         return obj
     else:
         # If it's something we don't know about just use the type name.
