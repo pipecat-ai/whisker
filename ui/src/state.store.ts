@@ -69,6 +69,9 @@ export const useStore = create<State>((set, get) => ({
     set({
       frames: {},
       framePaths: {},
+      selectedFrame: undefined,
+      selectedFramePath: undefined,
+      selectedProcessor: undefined,
       processors: processors,
       connections: pipeline.connections,
     });

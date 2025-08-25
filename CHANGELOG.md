@@ -9,9 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Cleanup frames and frame paths when a new pipeline is sent, and also cleanup
+  selected elements.
+
 - Fixed an issue in `WhiskerObserver` that would serialize strings as `str`
   instead of the actual string.
-
 
 ## [0.0.1] - 2025-08-25
 
