@@ -22,7 +22,7 @@ classifiers = [
 dependencies = [
     "loguru~=0.7.3",
     "pipecat-ai>=0.0.81",
-    "websockets>=13.1,<15.0",
+    "websockets>=14.2,<15.0",
 ]
 
 [project.urls]
