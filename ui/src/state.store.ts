@@ -66,7 +66,12 @@ export const useStore = create<State>((set, get) => ({
       processors[p.id] = p;
     }
 
-    set({ processors: processors, connections: pipeline.connections });
+    set({
+      frames: {},
+      framePaths: {},
+      processors: processors,
+      connections: pipeline.connections,
+    });
   },
 
   pushFrames: (messages) => {
