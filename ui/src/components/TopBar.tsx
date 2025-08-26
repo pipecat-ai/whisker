@@ -51,6 +51,8 @@ export function TopBar() {
         </button>
       )}
 
+      <div>Tip: Connect any time, frames are buffered while disconnected.</div>
+
       {/* Spacer pushes next item to far right */}
       <div style={{ flex: 1 }} />
 
