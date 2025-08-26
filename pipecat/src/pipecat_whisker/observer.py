@@ -27,7 +27,7 @@ import asyncio
 import json
 import time
 from dataclasses import asdict, is_dataclass
-from typing import Any, Dict, List, Optional, Tuple, Type
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type
 
 from loguru import logger
 from pipecat.frames.frames import BotSpeakingFrame, Frame, InputAudioRawFrame
@@ -41,7 +41,7 @@ from websockets import ConnectionClosedOK, WebSocketServerProtocol, serve
 MAX_BATCH_SIZE_BYTES = 10000
 
 
-def dataclass_serializer(obj: Any) -> Any:
+def whisker_obj_serializer(obj: Any) -> Any:
     """Recursively serialize dataclasses to a JSON-serializable dictionary.
 
     Args:
@@ -51,13 +51,13 @@ def dataclass_serializer(obj: Any) -> Any:
         Any: A JSON representation of the input object.
     """
     if is_dataclass(obj):
-        return {k: dataclass_serializer(v) for k, v in asdict(obj).items() if v is not None}
+        return {k: whisker_obj_serializer(v) for k, v in asdict(obj).items() if v is not None}
     elif isinstance(obj, bytes):
         return "bytes(...)"
     elif isinstance(obj, (list, tuple, set)):
-        return [dataclass_serializer(v) for v in obj if v is not None]
+        return [whisker_obj_serializer(v) for v in obj if v is not None]
     elif isinstance(obj, dict):
-        return {k: dataclass_serializer(v) for k, v in obj.items() if v is not None}
+        return {k: whisker_obj_serializer(v) for k, v in obj.items() if v is not None}
     elif isinstance(obj, BaseModel):
         return obj.model_dump(exclude_none=True)
     elif isinstance(obj, OpenAILLMContext):
@@ -69,17 +69,20 @@ def dataclass_serializer(obj: Any) -> Any:
         return type(obj).__name__
 
 
-def dataclass_to_json(obj: Any, **json_kwargs) -> str:
-    """Convert a dataclass to a JSON string.
+def whisker_serializer(frame: Frame, **kwargs) -> str:
+    """Serializes a frame to a JSON string.
 
     Args:
-        obj: The object to serialize.
-        **json_kwargs: Additional keyword arguments to pass to json.dumps().
+        frame: The frame to serialize.
+        **kwargs: Additional keyword arguments to pass to json.dumps().
 
     Returns:
-        str: A JSON string representation of the input object.
+        str: A JSON string representation of the input frame.
     """
-    return json.dumps(dataclass_serializer(obj), **json_kwargs)
+    return json.dumps(whisker_obj_serializer(frame), **kwargs)
+
+
+WhiskerSerializer = Callable[[Frame], Any]
 
 
 class WhiskerObserver(BaseObserver):
@@ -97,6 +100,7 @@ class WhiskerObserver(BaseObserver):
         port: int = 9090,
         batch_size: int = MAX_BATCH_SIZE_BYTES,
         exclude_frames: Tuple[Type[Frame], ...] = (InputAudioRawFrame, BotSpeakingFrame),
+        serializer: Optional[WhiskerSerializer] = None,
     ):
         """Initialize the Whisker observer.
 
@@ -108,6 +112,7 @@ class WhiskerObserver(BaseObserver):
                 the client.
             exclude_frames: Tuple of frame types to exclude from observation.
                 Defaults to (UserAudioRawFrame, BotSpeakingFrame).
+            serializer: Serializer used to serialize frames for sending to the client.
         """
         super().__init__()
         self._pipeline = pipeline
@@ -115,6 +120,7 @@ class WhiskerObserver(BaseObserver):
         self._port = port
         self._batch_size = batch_size
         self._exclude_frames = exclude_frames
+        self._serializer = serializer or whisker_serializer
 
         self._id = 0
         self._client: Optional[WebSocketServerProtocol] = None
@@ -311,7 +317,7 @@ class WhiskerObserver(BaseObserver):
             "event": "process",
             "direction": direction.name.lower(),
             "timestamp": time.time_ns() / 1_000_000,
-            "payload": dataclass_to_json(frame),
+            "payload": self._serializer(frame),
         }
 
         await self._send_queue.put(msg)
@@ -334,7 +340,7 @@ class WhiskerObserver(BaseObserver):
             "event": "push",
             "direction": direction.name.lower(),
             "timestamp": time.time_ns() / 1_000_000,
-            "payload": dataclass_to_json(frame),
+            "payload": self._serializer(frame),
         }
 
         await self._send_queue.put(msg)
