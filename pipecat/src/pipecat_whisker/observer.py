@@ -30,7 +30,7 @@ from dataclasses import asdict, is_dataclass
 from typing import Any, Dict, List, Optional, Tuple, Type
 
 from loguru import logger
-from pipecat.frames.frames import BotSpeakingFrame, Frame, UserAudioRawFrame
+from pipecat.frames.frames import BotSpeakingFrame, Frame, InputAudioRawFrame
 from pipecat.observers.base_observer import BaseObserver, FrameProcessed, FramePushed
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.processors.aggregators.openai_llm_context import OpenAILLMContext
@@ -95,7 +95,7 @@ class WhiskerObserver(BaseObserver):
         *,
         host: str = "localhost",
         port: int = 9090,
-        exclude_frames: Tuple[Type[Frame], ...] = (UserAudioRawFrame, BotSpeakingFrame),
+        exclude_frames: Tuple[Type[Frame], ...] = (InputAudioRawFrame, BotSpeakingFrame),
     ):
         """Initialize the Whisker observer.
 
