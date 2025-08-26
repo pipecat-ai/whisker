@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added `batch_size` field to `WhiskerObserver` to indicate the maximum batch
+  to buffer before sending a message to the client.
+
 - Added a note to indicate that frames are buffered when the client is
   disconnected. This may cause memory growth on the server side.
 

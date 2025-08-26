@@ -95,6 +95,7 @@ class WhiskerObserver(BaseObserver):
         *,
         host: str = "localhost",
         port: int = 9090,
+        batch_size: int = MAX_BATCH_SIZE_BYTES,
         exclude_frames: Tuple[Type[Frame], ...] = (InputAudioRawFrame, BotSpeakingFrame),
     ):
         """Initialize the Whisker observer.
@@ -103,6 +104,8 @@ class WhiskerObserver(BaseObserver):
             pipeline: The pipeline to observe and monitor.
             host: Host address to bind the WebSocket server to. Defaults to "localhost".
             port: Port number to bind the WebSocket server to. Defaults to 9090.
+            batch_size: Maximum batch size (in bytes) to buffer before sending a message to
+                the client.
             exclude_frames: Tuple of frame types to exclude from observation.
                 Defaults to (UserAudioRawFrame, BotSpeakingFrame).
         """
@@ -110,6 +113,7 @@ class WhiskerObserver(BaseObserver):
         self._pipeline = pipeline
         self._host = host
         self._port = port
+        self._batch_size = batch_size
         self._exclude_frames = exclude_frames
 
         self._id = 0
@@ -226,7 +230,7 @@ class WhiskerObserver(BaseObserver):
         size = 0
         for i, data in enumerate(self._batch):
             size += len(data)
-            if size >= MAX_BATCH_SIZE_BYTES:
+            if size >= self._batch_size:
                 return i
         return -1
 
