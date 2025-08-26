@@ -61,7 +61,7 @@ def dataclass_serializer(obj: Any) -> Any:
     elif isinstance(obj, BaseModel):
         return obj.model_dump(exclude_none=True)
     elif isinstance(obj, OpenAILLMContext):
-        return obj.get_messages()
+        return obj.get_messages_for_logging()
     elif isinstance(obj, (int, float, bool, str)):
         return obj
     else:

@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added a note to indicate that frames are buffered when the client is
   disconnected. This may cause memory growth on the server side.
 
+### Fixed
+
+- Fixed a `WhiskerObserver` where some frames would not be serialized properly.
+
 ## [0.0.4] - 2025-08-25
 
 ### Changed
