@@ -7,10 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## Changed
+
+- `WhiskerObserver` serializer function now gets an initial `BaseObserver`
+  argument.
+
+  ```python
+  def serializer(observer: BaseObserver, frame: Frame)
+  ```
+
+  instead of
+
+  ```python
+  def serializer(frame: Frame)
+  ```
+
 ## Fixed
 
-- Fixed an issue that would prevent `WhiskerObserver` to shutdown the
-  pipeline. Need pipecat-ai > 0.0.82.
+- Fixed a `WhiskerObserver` serialization issue and catch exceptions if
+  serialization fails.
+
+- Fixed an issue that would prevent `WhiskerObserver` from shutting down the
+  pipeline. Needs pipecat-ai > 0.0.82.
+
+# Performance
+
+- Avoid `WhiskerObserver` deepcopy and simply serialize fields.
 
 ## [0.0.5] - 2025-08-26
 

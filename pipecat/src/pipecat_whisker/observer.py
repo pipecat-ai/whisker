@@ -26,7 +26,7 @@ Think of Whisker as trace logging with batteries.
 import asyncio
 import json
 import time
-from dataclasses import asdict, is_dataclass
+from dataclasses import fields, is_dataclass
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type
 
 from loguru import logger
@@ -51,9 +51,11 @@ def whisker_obj_serializer(obj: Any) -> Any:
         Any: A JSON representation of the input object.
     """
     if is_dataclass(obj):
-        return {k: whisker_obj_serializer(v) for k, v in asdict(obj).items() if v is not None}
-    elif isinstance(obj, bytes):
-        return "bytes(...)"
+        return {
+            f.name: whisker_obj_serializer(getattr(obj, f.name))
+            for f in fields(obj)
+            if getattr(obj, f.name) is not None
+        }
     elif isinstance(obj, (list, tuple, set)):
         return [whisker_obj_serializer(v) for v in obj if v is not None]
     elif isinstance(obj, dict):
@@ -66,10 +68,10 @@ def whisker_obj_serializer(obj: Any) -> Any:
         return obj
     else:
         # If it's something we don't know about just use the type name.
-        return type(obj).__name__
+        return f"<type: {type(obj).__name__}>"
 
 
-def whisker_serializer(frame: Frame, **kwargs) -> str:
+def whisker_serializer(observer: BaseObserver, frame: Frame, **kwargs) -> str:
     """Serializes a frame to a JSON string.
 
     Args:
@@ -79,10 +81,14 @@ def whisker_serializer(frame: Frame, **kwargs) -> str:
     Returns:
         str: A JSON string representation of the input frame.
     """
-    return json.dumps(whisker_obj_serializer(frame), **kwargs)
+    try:
+        return json.dumps(whisker_obj_serializer(frame), **kwargs)
+    except Exception as e:
+        logger.warning(f"ᓚᘏᗢ {observer}: unable to serialize {frame}: {e}")
+        return '"Unable to deserialize, check server logs"'
 
 
-WhiskerSerializer = Callable[[Frame], Any]
+WhiskerSerializer = Callable[[BaseObserver, Frame], Any]
 
 
 class WhiskerObserver(BaseObserver):
@@ -324,7 +330,7 @@ class WhiskerObserver(BaseObserver):
             "event": "process",
             "direction": direction.name.lower(),
             "timestamp": time.time_ns() / 1_000_000,
-            "payload": self._serializer(frame),
+            "payload": self._serializer(self, frame),
         }
 
         await self._send_queue.put(msg)
@@ -347,7 +353,7 @@ class WhiskerObserver(BaseObserver):
             "event": "push",
             "direction": direction.name.lower(),
             "timestamp": time.time_ns() / 1_000_000,
-            "payload": self._serializer(frame),
+            "payload": self._serializer(self, frame),
         }
 
         await self._send_queue.put(msg)
