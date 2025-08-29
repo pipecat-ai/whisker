@@ -75,6 +75,7 @@ def whisker_serializer(observer: BaseObserver, frame: Frame, **kwargs) -> str:
     """Serializes a frame to a JSON string.
 
     Args:
+        observer: The observer that is calling this serializer.
         frame: The frame to serialize.
         **kwargs: Additional keyword arguments to pass to json.dumps().
 
