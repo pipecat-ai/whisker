@@ -124,6 +124,7 @@ class WhiskerObserver(BaseObserver):
 
         self._id = 0
         self._client: Optional[WebSocketServerProtocol] = None
+        self._server_future = asyncio.get_running_loop().create_future()
         self._server_task = asyncio.create_task(self._start_task_handler())
         self._send_task = asyncio.create_task(self._send_task_handler())
         self._send_queue = asyncio.Queue()
@@ -132,6 +133,12 @@ class WhiskerObserver(BaseObserver):
     async def cleanup(self):
         """Clean up resources and close the Whisker server."""
         await super().cleanup()
+
+        if self._client:
+            await self._client.close(reason="Whisker shutting down")
+
+        if not self._server_future.done():
+            self._server_future.set_result(None)
 
         if self._server_task:
             await self._server_task
@@ -161,7 +168,7 @@ class WhiskerObserver(BaseObserver):
         """
         async with serve(self._server_handler, self._host, self._port):
             logger.debug(f"ᓚᘏᗢ Whisker running at ws://{self._host}:{self._port}")
-            await asyncio.get_running_loop().create_future()
+            await self._server_future
 
     async def _server_handler(self, client: WebSocketServerProtocol):
         """Handle a new Whisker client connection.

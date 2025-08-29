@@ -5,6 +5,13 @@ All notable changes to **Pipecat** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## Fixed
+
+- Fixed an issue that would prevent `WhiskerObserver` to shutdown the
+  pipeline. Need pipecat-ai > 0.0.82.
+
 ## [0.0.5] - 2025-08-26
 
 ### Added
