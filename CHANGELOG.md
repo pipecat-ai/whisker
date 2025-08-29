@@ -30,7 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed an issue that would prevent `WhiskerObserver` from shutting down the
   pipeline. Needs pipecat-ai > 0.0.82.
 
-# Performance
+## Performance
 
 - Avoid `WhiskerObserver` deepcopy and simply serialize fields.
 
