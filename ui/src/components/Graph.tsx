@@ -34,8 +34,6 @@ export function Graph() {
   const setSelectedFramePath = useStore((s) => s.setSelectedFramePath);
   const frames = useStore((s) => s.frames);
 
-  const prevRef = useRef<Record<string, number>>({});
-
   const cyRef = useRef<cytoscape.Core | null>(null);
 
   const elements = useMemo(() => {
@@ -62,23 +60,30 @@ export function Graph() {
     }
   }, [selectedProcessor]);
 
+
   // Flash processors that get traffic
+  const FLASH_DURATION_MS = 150;
+  const lastTimesRef = useRef<Record<string, number>>({});
+
   useEffect(() => {
     const cy = cyRef.current;
     if (!cy) return;
+
     const flash = (id: string) => {
       const el = cy.$(`#${CSS.escape(id)}`);
       el.removeClass("flash"); // reset if still there
       el.addClass("flash");
-      setTimeout(() => el.removeClass("flash"), 100); // fade back
+      setTimeout(() => el.removeClass("flash"), FLASH_DURATION_MS);
     };
 
-    // Flash only if frames increased
-    Object.entries(frames).forEach(([pid, list]) => {
-      const prev = prevRef.current[pid] || 0;
-      const curr = list?.length || 0;
-      if (curr > prev) flash(pid);
-      prevRef.current[pid] = curr;
+    const now = Date.now();
+
+    Object.keys(frames).forEach((pid) => {
+      const last = lastTimesRef.current[pid] || 0;
+      if (now - last > FLASH_DURATION_MS) {
+        flash(pid);
+        lastTimesRef.current[pid] = now;
+      }
     });
   }, [frames]);
 
