@@ -12,10 +12,12 @@ export function useWhisker() {
   const setPipeline = useStore((s) => s.setPipeline);
   const pushFrames = useStore((s) => s.pushFrames);
 
+  const resetWhisker = () => {
+    setPipeline({ type: "pipeline", processors: [], connections: [] });
+  };
+
   const loadMessages = (data) => {
     try {
-      // Cleanup everything.
-      setPipeline({ type: "pipeline", processors: [], connections: [] });
       const frameMessages = [];
       for (const msg_packed of decodeMulti(data)) {
         const msg = msg_packed as ServerMessage;
@@ -32,5 +34,5 @@ export function useWhisker() {
     }
   };
 
-  return { loadMessages };
+  return { loadMessages, resetWhisker };
 }

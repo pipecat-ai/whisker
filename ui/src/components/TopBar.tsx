@@ -17,7 +17,7 @@ export function TopBar() {
   const url = useStore((s) => s.wsUrl);
   const setUrl = useStore((s) => s.setWsUrl);
   const { connect, disconnect } = usePipecatSocket();
-  const { loadMessages } = useWhisker();
+  const { loadMessages, resetWhisker } = useWhisker();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -43,6 +43,7 @@ export function TopBar() {
     reader.readAsArrayBuffer(file);
 
     reader.onload = () => {
+      resetWhisker();
       loadMessages(reader.result);
       e.target.value = "";
     };
