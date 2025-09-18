@@ -55,7 +55,18 @@ This starts the Whisker server that the graphical UI will connect to. By default
 ws://localhost:9090
 ```
 
-## 🚀 Running the debugger UI
+## 💾 Saving sessions
+
+You can also save your sessions to a file, which is helpful for debugging later or sharing with someone for assistance:
+
+
+```python
+whisker = WhiskerObserver(pipeline, file_name="whisker.bin")
+```
+
+Load the file using the Whisker client.
+
+## 🚀 Running the client
 
 Clone the repository:
 
