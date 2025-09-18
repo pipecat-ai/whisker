@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 from loguru import logger
 from openai.types.chat import ChatCompletionToolParam
 from pipecat.audio.vad.silero import SileroVADAnalyzer
-from pipecat.frames.frames import Frame
+from pipecat.frames.frames import Frame, LLMRunFrame
 from pipecat.pipeline.parallel_pipeline import ParallelPipeline
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
@@ -26,8 +26,8 @@ from pipecat.services.deepgram.stt import DeepgramSTTService
 from pipecat.services.llm_service import FunctionCallParams
 from pipecat.services.openai.llm import OpenAILLMService
 from pipecat.transports.base_transport import BaseTransport, TransportParams
-from pipecat.transports.network.fastapi_websocket import FastAPIWebsocketParams
-from pipecat.transports.services.daily import DailyParams
+from pipecat.transports.daily.transport import DailyParams
+from pipecat.transports.websocket.fastapi import FastAPIWebsocketParams
 
 from pipecat_whisker import WhiskerObserver
 
@@ -147,7 +147,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
         ]
     )
 
-    whisker = WhiskerObserver(pipeline)
+    whisker = WhiskerObserver(pipeline, file_name_prefix="switch-languages")
 
     task = PipelineTask(
         pipeline,
@@ -169,7 +169,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
                 "content": f"Please introduce yourself to the user and let them know the languages you speak. Your initial responses should be in {tts.current_language}.",
             }
         )
-        await task.queue_frames([context_aggregator.user().get_context_frame()])
+        await task.queue_frames([LLMRunFrame()])
 
     @transport.event_handler("on_client_disconnected")
     async def on_client_disconnected(transport, client):
