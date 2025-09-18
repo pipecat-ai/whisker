@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## Added
+
+- Allow saving sessions into a file and load them with the Whisker client.
+
 ## Changed
 
 - Whisker now uses msgpack for streaming messages instead of JSON.

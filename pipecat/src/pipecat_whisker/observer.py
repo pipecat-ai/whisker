@@ -24,11 +24,11 @@ Think of Whisker as trace logging with batteries.
 """
 
 import asyncio
-import json
 import time
 from dataclasses import fields, is_dataclass
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type
 
+import aiofiles
 import msgpack
 from loguru import logger
 from pipecat.frames.frames import BotSpeakingFrame, Frame, InputAudioRawFrame
@@ -108,6 +108,7 @@ class WhiskerObserver(BaseObserver):
         port: int = 9090,
         batch_size: int = MAX_BATCH_SIZE_BYTES,
         exclude_frames: Tuple[Type[Frame], ...] = (InputAudioRawFrame, BotSpeakingFrame),
+        file_name_prefix: Optional[str] = None,
         serializer: Optional[WhiskerSerializer] = None,
     ):
         """Initialize the Whisker observer.
@@ -120,6 +121,7 @@ class WhiskerObserver(BaseObserver):
                 the client.
             exclude_frames: Tuple of frame types to exclude from observation.
                 Defaults to (InputAudioRawFrame, BotSpeakingFrame).
+            file_name_prefix: File name prefix to store each client session.
             serializer: Serializer used to serialize frames for sending to the client.
         """
         super().__init__()
@@ -128,6 +130,7 @@ class WhiskerObserver(BaseObserver):
         self._port = port
         self._batch_size = batch_size
         self._exclude_frames = exclude_frames
+        self._file_name_prefix = file_name_prefix
         self._serializer = serializer or whisker_serializer
 
         self._id = 0
@@ -138,9 +141,15 @@ class WhiskerObserver(BaseObserver):
         self._send_queue = asyncio.Queue()
         self._batch = []
 
+        # Open file
+        self._file = None
+        self._file_counter = 0
+
     async def cleanup(self):
         """Clean up resources and close the Whisker server."""
         await super().cleanup()
+
+        await self._maybe_close_file()
 
         if self._client:
             await self._client.close(reason="Whisker shutting down")
@@ -174,6 +183,12 @@ class WhiskerObserver(BaseObserver):
 
         This method runs in a separate task and manages the websocket server lifecycle.
         """
+        # We save the session even if there's no client connected.
+        await self._maybe_open_file()
+
+        # Queue initial pipeline structure
+        await self._send_pipeline()
+
         async with serve(self._server_handler, self._host, self._port):
             logger.debug(f"ᓚᘏᗢ Whisker running at ws://{self._host}:{self._port}")
             await self._server_future
@@ -192,8 +207,6 @@ class WhiskerObserver(BaseObserver):
 
         self._client = client
         try:
-            # Send initial pipeline structure
-            await self._send_pipeline()
             # Keep alive
             async for _ in self._client:
                 pass
@@ -203,17 +216,34 @@ class WhiskerObserver(BaseObserver):
             logger.warning(f"ᓚᘏᗢ Whisker: client closed with error: {e}")
         finally:
             logger.debug("ᓚᘏᗢ Whisker: client disconnected")
-            self._client = None
+            await self._reset_client()
+
+    async def _reset_client(self):
+        self._client = None
+        await self._maybe_close_file()
+
+    async def _maybe_open_file(self):
+        if self._file_name_prefix:
+            self._file_counter += 1
+            self._file_name = f"{self._file_name_prefix}-{self._file_counter:03}.pcat"
+            logger.debug(f"ᓚᘏᗢ Whisker: opening session file {self._file_name}")
+            self._file = await aiofiles.open(self._file_name, "wb")
+
+    async def _maybe_close_file(self):
+        if self._file:
+            logger.debug(f"ᓚᘏᗢ Whisker: closing session file {self._file_name}")
+            await self._file.close()
+            self._file = None
 
     async def _send_task_handler(self):
         """Handle sending batched messages to the client."""
         while True:
             try:
-                data = await asyncio.wait_for(self._send_queue.get(), timeout=0.5)
+                data, flush = await asyncio.wait_for(self._send_queue.get(), timeout=0.5)
 
                 self._batch.append(data)
 
-                await self._maybe_send_batch()
+                await self._maybe_send_batch(flush=flush)
 
                 self._send_queue.task_done()
             except asyncio.TimeoutError:
@@ -313,7 +343,7 @@ class WhiskerObserver(BaseObserver):
         }
         msg_packed = msgpack.packb(msg)
 
-        await self._send(msg_packed)
+        await self._queue_data(msg_packed)
 
     async def _send_process_frame(self, data: FrameProcessed):
         """Send a frame processing event to the client.
@@ -337,7 +367,7 @@ class WhiskerObserver(BaseObserver):
         }
         msg_packed = msgpack.packb(msg)
 
-        await self._send_queue.put(msg_packed)
+        await self._queue_data(msg_packed)
 
     async def _send_push_frame(self, data: FramePushed):
         """Send a frame push event to the client.
@@ -361,7 +391,12 @@ class WhiskerObserver(BaseObserver):
         }
         msg_packed = msgpack.packb(msg)
 
-        await self._send_queue.put(msg_packed)
+        await self._queue_data(msg_packed)
+
+    async def _queue_data(self, msg: bytes, flush: bool = False):
+        await self._send_queue.put((msg, flush))
+        if self._file:
+            await self._file.write(msg)
 
     async def _send(self, msg: bytes):
         """Send a message to the connected client.
