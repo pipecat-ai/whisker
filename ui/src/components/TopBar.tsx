@@ -4,10 +4,11 @@
 // SPDX-License-Identifier: BSD 2-Clause License
 //
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useStore } from "../state.store";
 import cls from "classnames";
 import { usePipecatSocket } from "../hooks.usePipecatSocket";
+import { useWhisker } from "../hooks.useWhisker";
 
 export function TopBar() {
   const theme = useStore((s) => s.theme);
@@ -16,6 +17,7 @@ export function TopBar() {
   const url = useStore((s) => s.wsUrl);
   const setUrl = useStore((s) => s.setWsUrl);
   const { connect, disconnect } = usePipecatSocket();
+  const { loadMessages } = useWhisker();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -25,6 +27,30 @@ export function TopBar() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [theme, setTheme]);
+
+  const handleButtonClick = () => {
+    fileInputRef.current?.click(); // open file dialog
+  };
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.readAsArrayBuffer(file);
+
+    reader.onload = () => {
+      loadMessages(reader.result);
+      e.target.value = "";
+    };
+
+    reader.onerror = () => {
+      console.error("Error reading file", reader.error);
+    };
+  };
 
   return (
     <div className="topbar">
@@ -51,10 +77,22 @@ export function TopBar() {
         </button>
       )}
 
-      <div>Tip: Connect any time, frames are buffered while disconnected.</div>
+      <button onClick={handleButtonClick} className="btn primary">
+        Load session
+      </button>
+
+      <input
+        type="file"
+        ref={fileInputRef}
+        style={{ display: "none" }}
+        accept=".pcat"
+        onChange={handleFileChange}
+      />
 
       {/* Spacer pushes next item to far right */}
       <div style={{ flex: 1 }} />
+
+      <div>Tip: Connect any time, frames are buffered while disconnected.</div>
 
       <button
         className="btn"
