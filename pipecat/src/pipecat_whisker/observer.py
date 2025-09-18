@@ -108,7 +108,7 @@ class WhiskerObserver(BaseObserver):
         port: int = 9090,
         batch_size: int = MAX_BATCH_SIZE_BYTES,
         exclude_frames: Tuple[Type[Frame], ...] = (InputAudioRawFrame, BotSpeakingFrame),
-        file_name_prefix: Optional[str] = None,
+        file_name: Optional[str] = None,
         serializer: Optional[WhiskerSerializer] = None,
     ):
         """Initialize the Whisker observer.
@@ -121,8 +121,8 @@ class WhiskerObserver(BaseObserver):
                 the client.
             exclude_frames: Tuple of frame types to exclude from observation.
                 Defaults to (InputAudioRawFrame, BotSpeakingFrame).
-            file_name_prefix: File name prefix to store each client session.
-            serializer: Serializer used to serialize frames for sending to the client.
+            file_name: Optional file path to save the debugging session for later use.
+            serializer: Optiona serializer used to serialize frames for sending to the client.
         """
         super().__init__()
         self._pipeline = pipeline
@@ -130,7 +130,7 @@ class WhiskerObserver(BaseObserver):
         self._port = port
         self._batch_size = batch_size
         self._exclude_frames = exclude_frames
-        self._file_name_prefix = file_name_prefix
+        self._file_name = file_name
         self._serializer = serializer or whisker_serializer
 
         self._id = 0
@@ -143,7 +143,6 @@ class WhiskerObserver(BaseObserver):
 
         # Open file
         self._file = None
-        self._file_counter = 0
 
     async def cleanup(self):
         """Clean up resources and close the Whisker server."""
@@ -220,18 +219,15 @@ class WhiskerObserver(BaseObserver):
 
     async def _reset_client(self):
         self._client = None
-        await self._maybe_close_file()
 
     async def _maybe_open_file(self):
-        if self._file_name_prefix:
-            self._file_counter += 1
-            self._file_name = f"{self._file_name_prefix}-{self._file_counter:03}.pcat"
-            logger.debug(f"ᓚᘏᗢ Whisker: opening session file {self._file_name}")
+        if self._file_name:
+            logger.debug(f"ᓚᘏᗢ Whisker: opening file {self._file_name}")
             self._file = await aiofiles.open(self._file_name, "wb")
 
     async def _maybe_close_file(self):
         if self._file:
-            logger.debug(f"ᓚᘏᗢ Whisker: closing session file {self._file_name}")
+            logger.debug(f"ᓚᘏᗢ Whisker: closing file {self._file_name}")
             await self._file.close()
             self._file = None
 

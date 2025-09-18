@@ -147,7 +147,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
         ]
     )
 
-    whisker = WhiskerObserver(pipeline, file_name_prefix="switch-languages")
+    whisker = WhiskerObserver(pipeline, file_name="switch-languages.bin")
 
     task = PipelineTask(
         pipeline,

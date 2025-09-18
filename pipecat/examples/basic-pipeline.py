@@ -83,7 +83,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
         ]
     )
 
-    whisker = WhiskerObserver(pipeline, file_name_prefix="basic-pipeline")
+    whisker = WhiskerObserver(pipeline, file_name="basic-pipeline.bin")
 
     task = PipelineTask(
         pipeline,
