@@ -118,7 +118,7 @@ function FrameItem({
           className="footer-note"
           style={{ whiteSpace: "pre-wrap", marginTop: 4 }}
         >
-          {JSON.stringify(JSON.parse(frame.payload), null, 2)}
+          {JSON.stringify(frame.payload, null, 2)}
         </div>
       )}
     </div>

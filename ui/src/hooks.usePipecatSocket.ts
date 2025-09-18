@@ -7,6 +7,7 @@
 import { useRef } from "react";
 import { useStore } from "./state.store";
 import { ServerMessage } from "./types";
+import { decodeMulti } from "@msgpack/msgpack";
 
 export function usePipecatSocket() {
   const wsRef = useRef<WebSocket | null>(null);
@@ -27,6 +28,7 @@ export function usePipecatSocket() {
   const connect = () => {
     disconnect();
     const ws = new WebSocket(url);
+    ws.binaryType = "arraybuffer";
     wsRef.current = ws;
     ws.onopen = () => setConnected(true);
     ws.onclose = () => setConnected(false);
@@ -34,10 +36,8 @@ export function usePipecatSocket() {
     ws.onmessage = (ev) => {
       try {
         const frameMessages = [];
-        const lines = (ev.data as string).split(/\r?\n/);
-        for (const line of lines) {
-          if (!line.trim()) continue; // skip empty
-          const msg = JSON.parse(line) as ServerMessage;
+        for (const msg_packed of decodeMulti(ev.data)) {
+          const msg = msg_packed as ServerMessage;
           if (msg.type === "pipeline") {
             // We only need one message
             setPipeline(msg);
@@ -47,7 +47,7 @@ export function usePipecatSocket() {
         }
         pushFrames(frameMessages);
       } catch (err) {
-        console.error("Error parsing incoming messages:", err);
+        console.error("Error decoding incoming messages:", err);
       }
     };
   };
