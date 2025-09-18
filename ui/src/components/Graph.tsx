@@ -60,7 +60,6 @@ export function Graph() {
     }
   }, [selectedProcessor]);
 
-
   // Flash processors that get traffic
   const FLASH_DURATION_MS = 150;
   const lastTimesRef = useRef<Record<string, number>>({});
