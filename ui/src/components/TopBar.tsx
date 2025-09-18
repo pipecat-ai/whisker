@@ -86,7 +86,6 @@ export function TopBar() {
         type="file"
         ref={fileInputRef}
         style={{ display: "none" }}
-        accept=".pcat"
         onChange={handleFileChange}
       />
 
