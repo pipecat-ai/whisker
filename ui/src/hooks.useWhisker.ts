@@ -15,7 +15,7 @@ export function useWhisker() {
   const loadMessages = (data) => {
     try {
       // Cleanup everything.
-      setPipeline({type: "pipeline", processors: [], connections: []})
+      setPipeline({ type: "pipeline", processors: [], connections: [] });
       const frameMessages = [];
       for (const msg_packed of decodeMulti(data)) {
         const msg = msg_packed as ServerMessage;

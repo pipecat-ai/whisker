@@ -12,11 +12,12 @@ It lets you **visualize pipelines and debug frames in real time** — so you can
 
 With **Whisker** you can:
 
-- 🗺️ View a live graph of your pipeline.
-- ⚡ Watch frame processors flash in real time as frames pass through them.
-- 📌 Select a processor to inspect the frames it has handled (both pushed and processed).
-- 🔍 Filter frames by name to quickly find the ones you care about.
-- 🧵 Select a frame to trace its full path through the pipeline.
+- 🗺️ View a live graph of your pipeline
+- ⚡ Watch frame processors flash in real time as frames pass through them
+- 📌 Select a processor to inspect the frames it has handled (both pushed and processed)
+- 🔍 Filter frames by name to quickly find the ones you care about
+- 🧵 Select a frame to trace its full path through the pipeline
+- 💾 Save and load previous sessions for review, collaboration, or troubleshooting
 
 Think of Whisker as **trace logging with batteries**.
 
