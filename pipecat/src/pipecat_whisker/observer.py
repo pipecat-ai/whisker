@@ -29,6 +29,7 @@ import time
 from dataclasses import fields, is_dataclass
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type
 
+import msgpack
 from loguru import logger
 from pipecat.frames.frames import BotSpeakingFrame, Frame, InputAudioRawFrame
 from pipecat.observers.base_observer import BaseObserver, FrameProcessed, FramePushed
@@ -36,7 +37,7 @@ from pipecat.pipeline.pipeline import Pipeline
 from pipecat.processors.aggregators.openai_llm_context import OpenAILLMContext
 from pipecat.processors.frame_processor import FrameProcessor
 from pydantic import BaseModel
-from websockets import ConnectionClosedOK, WebSocketServerProtocol, serve
+from websockets import ConnectionClosedOK, serve
 
 MAX_BATCH_SIZE_BYTES = 10000
 
@@ -83,7 +84,7 @@ def whisker_serializer(observer: BaseObserver, frame: Frame, **kwargs) -> str:
         str: A JSON string representation of the input frame.
     """
     try:
-        return json.dumps(whisker_obj_serializer(frame), **kwargs)
+        return whisker_obj_serializer(frame)
     except Exception as e:
         logger.warning(f"ᓚᘏᗢ {observer}: unable to serialize {frame}: {e}")
         return '"Unable to deserialize, check server logs"'
@@ -118,7 +119,7 @@ class WhiskerObserver(BaseObserver):
             batch_size: Maximum batch size (in bytes) to buffer before sending a message to
                 the client.
             exclude_frames: Tuple of frame types to exclude from observation.
-                Defaults to (UserAudioRawFrame, BotSpeakingFrame).
+                Defaults to (InputAudioRawFrame, BotSpeakingFrame).
             serializer: Serializer used to serialize frames for sending to the client.
         """
         super().__init__()
@@ -130,7 +131,7 @@ class WhiskerObserver(BaseObserver):
         self._serializer = serializer or whisker_serializer
 
         self._id = 0
-        self._client: Optional[WebSocketServerProtocol] = None
+        self._client = None
         self._server_future = asyncio.get_running_loop().create_future()
         self._server_task = asyncio.create_task(self._start_task_handler())
         self._send_task = asyncio.create_task(self._send_task_handler())
@@ -177,7 +178,7 @@ class WhiskerObserver(BaseObserver):
             logger.debug(f"ᓚᘏᗢ Whisker running at ws://{self._host}:{self._port}")
             await self._server_future
 
-    async def _server_handler(self, client: WebSocketServerProtocol):
+    async def _server_handler(self, client):
         """Handle a new Whisker client connection.
 
         Args:
@@ -210,8 +211,7 @@ class WhiskerObserver(BaseObserver):
             try:
                 data = await asyncio.wait_for(self._send_queue.get(), timeout=0.5)
 
-                msg = json.dumps(data)
-                self._batch.append(msg)
+                self._batch.append(data)
 
                 await self._maybe_send_batch()
 
@@ -226,8 +226,8 @@ class WhiskerObserver(BaseObserver):
             flush: If True, force sending the current batch immediately.
         """
 
-        def build_message(batch):
-            return "\n".join(batch)
+        def build_message(batch) -> bytes:
+            return b"".join(batch)
 
         if not self._client or not self._batch:
             return
@@ -311,7 +311,9 @@ class WhiskerObserver(BaseObserver):
             "processors": processors,
             "connections": connections,
         }
-        await self._send(json.dumps(msg))
+        msg_packed = msgpack.packb(msg)
+
+        await self._send(msg_packed)
 
     async def _send_process_frame(self, data: FrameProcessed):
         """Send a frame processing event to the client.
@@ -333,8 +335,9 @@ class WhiskerObserver(BaseObserver):
             "timestamp": time.time_ns() / 1_000_000,
             "payload": self._serializer(self, frame),
         }
+        msg_packed = msgpack.packb(msg)
 
-        await self._send_queue.put(msg)
+        await self._send_queue.put(msg_packed)
 
     async def _send_push_frame(self, data: FramePushed):
         """Send a frame push event to the client.
@@ -356,14 +359,15 @@ class WhiskerObserver(BaseObserver):
             "timestamp": time.time_ns() / 1_000_000,
             "payload": self._serializer(self, frame),
         }
+        msg_packed = msgpack.packb(msg)
 
-        await self._send_queue.put(msg)
+        await self._send_queue.put(msg_packed)
 
-    async def _send(self, msg: str):
+    async def _send(self, msg: bytes):
         """Send a message to the connected client.
 
         Args:
-            msg: The message to send, as a JSON string.
+            msg: The message to send as bytes
         """
         try:
             if self._client:

@@ -7,10 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## Changed
+
+- Whisker now uses msgpack for streaming messages instead of JSON.
+
 ## Fixed
 
 - Fixed an issue where processor flashing would be delayed.
-
 
 ## [0.0.6] - 2025-08-29
 
