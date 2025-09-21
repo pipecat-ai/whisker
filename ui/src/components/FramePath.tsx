@@ -132,7 +132,6 @@ const FramePathItem = React.forwardRef<HTMLDivElement, FramePathItemProps>(
               : "rgba(59,130,246,0.15)",
           display: "flex",
           flexDirection: "column",
-
           border: isSelected ? "2px solid black" : "1px solid transparent",
         }}
         onClick={onClick}
