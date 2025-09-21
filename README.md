@@ -27,9 +27,10 @@ Think of Whisker as **trace logging with batteries**.
 
 **Requirements:**
 
-* Python 3.10+
-* [Pipecat](https://github.com/pipecat-ai/pipecat) installed
-* Node.js 20+ (for the UI)
+- Python 3.10+
+- [Pipecat](https://github.com/pipecat-ai/pipecat) installed
+- Node.js 20+ (for the UI)
+- [ngrok](https://ngrok.com/) (for connecting to the hosted UI)
 
 ### 1. Install Whisker for Python
 
@@ -55,10 +56,49 @@ This starts the Whisker server that the graphical UI will connect to. By default
 ws://localhost:9090
 ```
 
+### 3. Connect to the Whisker UI
+
+You have two options to access the Whisker UI:
+
+#### Option A: Use the hosted UI (Recommended)
+
+1. **Expose your local server with ngrok:**
+   ```bash
+   ngrok http 9090
+   ```
+2. **Copy the ngrok URL** (e.g., `https://abc123def.ngrok.io`)
+
+3. **Open the hosted Whisker UI:** [https://whisker.pipecat.ai/](https://whisker.pipecat.ai/)
+
+4. **Connect to your bot:**
+   - In the WebSocket URL field, enter: `wss://your-ngrok-url.ngrok.io`
+   - Click connect
+
+#### Option B: Run the UI locally
+
+If you prefer to run the UI locally:
+
+1. **Clone the repository:**
+
+   ```bash
+   git clone https://github.com/pipecat-ai/whisker.git
+   ```
+
+2. **Start the UI:**
+
+   ```bash
+   cd whisker/ui
+   npm install
+   npm run dev
+   ```
+
+3. **Connect to [http://localhost:5173](http://localhost:5173)**
+
+The UI will automatically connect to `ws://localhost:9090` by default.
+
 ## 💾 Saving sessions
 
 You can also save your sessions to a file, which is helpful for debugging later or sharing with someone for assistance:
-
 
 ```python
 whisker = WhiskerObserver(pipeline, file_name="whisker.bin")
@@ -66,25 +106,7 @@ whisker = WhiskerObserver(pipeline, file_name="whisker.bin")
 
 Load the file using the Whisker client.
 
-## 🚀 Running the client
-
-Clone the repository:
-
-```bash
-git clone https://github.com/pipecat-ai/whisker.git
-```
-
-Then, start Whisker with:
-
-```bash
-cd ui
-npm install
-npm run dev
-```
-
-and connect to [http://localhost:5173](http://localhost:5173).
-
 ## 📚 Next steps
 
-* View some examples in the [`examples`](pipecat/examples/) folder
-* See the [Pipecat documentation](https://docs.pipecat.ai) for more about building bots
+- View some examples in the [`examples`](pipecat/examples/) folder
+- See the [Pipecat documentation](https://docs.pipecat.ai) for more about building bots
