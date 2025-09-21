@@ -10,7 +10,21 @@ import dagre from "cytoscape-dagre";
 import { useEffect, useMemo, useRef } from "react";
 import { useStore } from "../state.store";
 
-const layoutOptions: cytoscape.LayoutOptions = {
+// Dagre layout options - extending BaseLayoutOptions with dagre-specific options
+interface DagreLayoutOptions extends cytoscape.BaseLayoutOptions {
+  name: "dagre";
+  fit?: boolean;
+  padding?: number;
+  spacingFactor?: number;
+  nodeDimensionsIncludeLabels?: boolean;
+  rankDir?: "TB" | "BT" | "LR" | "RL";
+  rankSep?: number;
+  nodeSep?: number;
+  edgeSep?: number;
+  minlen?: number;
+}
+
+const layoutOptions: DagreLayoutOptions = {
   name: "dagre",
   nodeDimensionsIncludeLabels: true, // Ensures labels are considered in layout
   fit: false,
@@ -86,7 +100,7 @@ export function Graph() {
     });
   }, [frames]);
 
-  const stylesheet: cytoscape.Stylesheet[] = [
+  const stylesheet: cytoscape.StylesheetJson = [
     {
       selector: "node",
       style: {
@@ -106,7 +120,7 @@ export function Graph() {
       selector: "node.flash",
       style: {
         "transition-property": "background-color",
-        "transition-duration": "0.12s",
+        "transition-duration": 120,
         "background-color": "#38B2AC", // teal flash
       },
     },
@@ -146,9 +160,9 @@ export function Graph() {
         const layout = cy.layout(layoutOptions);
         layout.run();
       }}
-      elements={elements as any}
+      elements={elements}
       style={{ width: "100%", height: "100%" }}
-      stylesheet={stylesheet as any}
+      stylesheet={stylesheet}
     />
   );
 }

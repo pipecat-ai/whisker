@@ -41,7 +41,7 @@ export function FramePath() {
   useEffect(() => {
     if (selectedFramePath) {
       const idx = frameTimeline.findIndex(
-        ({ processor, frame }) => frame.id === selectedFramePath.id,
+        ({ processor, frame }) => frame.id === selectedFramePath.id
       );
       if (idx >= 0 && refs.current[idx]) {
         refs.current[idx]!.focus();
@@ -61,7 +61,9 @@ export function FramePath() {
             return (
               <FramePathItem
                 idx={idx}
-                ref={(el) => (refs.current[idx] = el)}
+                ref={(el) => {
+                  refs.current[idx] = el;
+                }}
                 frame={frame}
                 processor={processor}
                 isSelected={isSelected}
@@ -105,10 +107,16 @@ type FramePathItemProps = {
 const FramePathItem = React.forwardRef<HTMLDivElement, FramePathItemProps>(
   ({ idx, frame, processor, isSelected, onClick, onKeyDown }, ref) => {
     useEffect(() => {
-      if (isSelected && ref.current) {
+      if (
+        isSelected &&
+        ref &&
+        typeof ref === "object" &&
+        "current" in ref &&
+        ref.current
+      ) {
         ref.current.scrollIntoView({ block: "nearest" });
       }
-    }, [isSelected]);
+    }, [isSelected, ref]);
 
     return (
       <div
@@ -142,5 +150,5 @@ const FramePathItem = React.forwardRef<HTMLDivElement, FramePathItemProps>(
         </div>
       </div>
     );
-  },
+  }
 );
