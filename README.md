@@ -60,13 +60,13 @@ ws://localhost:9090
 
 You have two options to access the Whisker UI:
 
-#### Option A: Use the hosted UI (Recommended)
+#### 🌐 Option A: Use the hosted UI (Recommended)
 
 1. **Expose your local server with ngrok:**
    ```bash
    ngrok http 9090
    ```
-2. **Copy the ngrok URL** (e.g., `https://abc123def.ngrok.io`)
+2. **Copy the ngrok URL** (e.g., `your-ngrok-url.ngrok.io`)
 
 3. **Open the hosted Whisker UI:** [https://whisker.pipecat.ai/](https://whisker.pipecat.ai/)
 
@@ -74,7 +74,7 @@ You have two options to access the Whisker UI:
    - In the WebSocket URL field, enter: `wss://your-ngrok-url.ngrok.io`
    - Click connect
 
-#### Option B: Run the UI locally
+#### 🏠 Option B: Run the UI locally
 
 If you prefer to run the UI locally:
 
