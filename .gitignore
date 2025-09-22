@@ -32,6 +32,7 @@ MANIFEST
 
 # Node
 node_modules/
+*.tsbuildinfo
 
 # uv
 .python-version
