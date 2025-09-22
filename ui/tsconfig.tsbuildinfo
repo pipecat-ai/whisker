@@ -1,1 +1,0 @@
-{"root":["./src/app.tsx","./src/hooks.usepipecatsocket.ts","./src/hooks.usewhisker.ts","./src/main.tsx","./src/state.store.ts","./src/types.ts","./src/components/frameinspector.tsx","./src/components/framepath.tsx","./src/components/graph.tsx","./src/components/topbar.tsx"],"version":"5.9.2"}
