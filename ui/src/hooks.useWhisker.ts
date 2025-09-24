@@ -12,10 +12,6 @@ export function useWhisker() {
   const setPipeline = useStore((s) => s.setPipeline);
   const pushFrames = useStore((s) => s.pushFrames);
 
-  const resetWhisker = () => {
-    setPipeline({ type: "pipeline", processors: [], connections: [] });
-  };
-
   const loadMessages = (data) => {
     try {
       const frameMessages = [];
@@ -34,5 +30,5 @@ export function useWhisker() {
     }
   };
 
-  return { loadMessages, resetWhisker };
+  return { loadMessages };
 }

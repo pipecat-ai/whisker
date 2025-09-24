@@ -32,16 +32,16 @@ type State = {
   frames: Record<string, FrameMessage[]>;
   framePaths: Record<number, Processor[]>;
 
+  selectedProcessor?: Processor;
+  selectedFrame?: FrameMessage;
+  selectedFramePath?: FrameMessage;
+
+  resetPipeline: () => void;
   setPipeline: (pipeline: PipelineMessage) => void;
   pushFrames: (frames: FrameMessage[]) => void;
 
-  selectedProcessor?: Processor;
   setSelectedProcessorById: (id?: string) => void;
-
-  selectedFrame?: FrameMessage;
   setSelectedFrame: (f?: FrameMessage) => void;
-
-  selectedFramePath?: FrameMessage;
   setSelectedFramePath: (f?: FrameMessage) => void;
 };
 
@@ -69,21 +69,37 @@ export const useStore = create<State>((set, get) => ({
   frames: {},
   framePaths: {},
 
-  setPipeline: (pipeline) => {
-    const processors = {};
-    for (const p of pipeline.processors) {
-      processors[p.id] = p;
-    }
+  selectedProcessor: undefined,
+  selectedFrame: undefined,
+  selectedFramePath: undefined,
 
+  resetPipeline: () => {
     set({
       frames: {},
       framePaths: {},
       selectedFrame: undefined,
       selectedFramePath: undefined,
       selectedProcessor: undefined,
-      processors: processors,
-      connections: pipeline.connections,
-      versions: pipeline.versions,
+      processors: {},
+      connections: [],
+      versions: undefined,
+    });
+  },
+
+  setPipeline: (pipeline) => {
+    set((s) => {
+      const processors = {};
+      for (const p of pipeline.processors) {
+        processors[p.id] = p;
+      }
+
+      s.resetPipeline();
+
+      return {
+        processors: processors,
+        connections: pipeline.connections,
+        versions: pipeline.versions,
+      };
     });
   },
 
@@ -111,15 +127,12 @@ export const useStore = create<State>((set, get) => ({
     });
   },
 
-  selectedProcessor: undefined,
   setSelectedProcessorById: (id) =>
     set((state) => ({
       selectedProcessor: id ? state.processors[id] : undefined,
     })),
 
-  selectedFrame: undefined,
   setSelectedFrame: (f) => set({ selectedFrame: f }),
 
-  selectedFramePath: undefined,
   setSelectedFramePath: (f) => set({ selectedFramePath: f }),
 }));
