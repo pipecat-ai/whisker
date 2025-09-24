@@ -39,7 +39,7 @@ const layoutOptions: DagreLayoutOptions = {
 
 cytoscape.use(dagre);
 
-export function Graph() {
+export function Pipeline() {
   const processors = useStore((s) => s.processors);
   const connections = useStore((s) => s.connections);
   const selectedProcessor = useStore((s) => s.selectedProcessor);

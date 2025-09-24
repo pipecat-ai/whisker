@@ -5,7 +5,13 @@
 //
 
 import { create } from "zustand";
-import { Connection, FrameMessage, PipelineMessage, Processor } from "./types";
+import {
+  Connection,
+  FrameMessage,
+  PipelineMessage,
+  Processor,
+  Versions,
+} from "./types";
 
 type Theme = "light" | "dark";
 
@@ -21,6 +27,7 @@ type State = {
 
   processors: Record<string, Processor>;
   connections: Connection[];
+  versions?: Versions;
 
   frames: Record<string, FrameMessage[]>;
   framePaths: Record<number, Processor[]>;
@@ -57,6 +64,8 @@ export const useStore = create<State>((set, get) => ({
 
   processors: {},
   connections: [],
+  versions: undefined,
+
   frames: {},
   framePaths: {},
 
@@ -74,6 +83,7 @@ export const useStore = create<State>((set, get) => ({
       selectedProcessor: undefined,
       processors: processors,
       connections: pipeline.connections,
+      versions: pipeline.versions,
     });
   },
 

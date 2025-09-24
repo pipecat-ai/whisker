@@ -11,12 +11,20 @@ export type Processor = {
   type: string;
 };
 
+export type Versions = {
+  platform: string;
+  python: string;
+  pipecat: string;
+  whisker: string;
+};
+
 export type Connection = { from: string; to: string };
 
 export type PipelineMessage = {
   type: "pipeline";
   processors: Processor[];
   connections: Connection[];
+  versions?: Versions;
 };
 
 export type FrameMessage = {
