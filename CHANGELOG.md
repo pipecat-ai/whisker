@@ -5,6 +5,19 @@ All notable changes to **Pipecat** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.9] - 2025-09-24
+
+## Added
+
+- The Whisker client now displays Whisker/Pipecat/Python/Platform versions. This
+  can be useful to know in which system the observer is/was running.
+
+## Fixed
+
+- Fixed an issue that would cause the client to display a blank page (with an
+  error in the console) when loading a file after a previous network session was
+  already loaded.
+
 ## [0.0.8] - 2025-09-18
 
 ## Changed
