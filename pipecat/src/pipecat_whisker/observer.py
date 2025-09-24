@@ -24,8 +24,11 @@ Think of Whisker as trace logging with batteries.
 """
 
 import asyncio
+import platform
+import sys
 import time
 from dataclasses import fields, is_dataclass
+from importlib.metadata import version
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type
 
 import aiofiles
@@ -38,6 +41,11 @@ from pipecat.processors.aggregators.openai_llm_context import OpenAILLMContext
 from pipecat.processors.frame_processor import FrameProcessor
 from pydantic import BaseModel
 from websockets import ConnectionClosedOK, serve
+
+__PIPECAT_VERSION__ = version("pipecat-ai")
+__WHISKER_VERSION__ = version("pipecat-ai-whisker")
+__PYTHON_VERSION__ = sys.version
+
 
 MAX_BATCH_SIZE_BYTES = 10000
 
@@ -336,6 +344,12 @@ class WhiskerObserver(BaseObserver):
             "type": "pipeline",
             "processors": processors,
             "connections": connections,
+            "versions": {
+                "python": __PYTHON_VERSION__,
+                "pipecat": __PIPECAT_VERSION__,
+                "whisker": __WHISKER_VERSION__,
+                "platform": platform.platform(),
+            },
         }
         msg_packed = msgpack.packb(msg)
 
