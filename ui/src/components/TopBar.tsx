@@ -16,6 +16,7 @@ export function TopBar() {
   const connected = useStore((s) => s.connected);
   const url = useStore((s) => s.wsUrl);
   const setUrl = useStore((s) => s.setWsUrl);
+  const resetPipeline = useStore((s) => s.resetPipeline);
   const { connect, disconnect } = usePipecatSocket();
   const { loadMessages } = useWhisker();
 
@@ -43,8 +44,15 @@ export function TopBar() {
     reader.readAsArrayBuffer(file);
 
     reader.onload = () => {
-      loadMessages(reader.result);
-      e.target.value = "";
+      const CLEAR_PIPELINE_MS = 500;
+
+      resetPipeline();
+
+      // We just give time to Cytoscape to clear everything.
+      setTimeout(() => {
+        loadMessages(reader.result);
+        e.target.value = "";
+      }, CLEAR_PIPELINE_MS);
     };
 
     reader.onerror = () => {
