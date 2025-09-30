@@ -112,7 +112,7 @@ class WhiskerObserver(BaseObserver):
         self,
         pipeline: Pipeline,
         *,
-        host: str = "localhost",
+        host: str = "0.0.0.0",
         port: int = 9090,
         batch_size: int = MAX_BATCH_SIZE_BYTES,
         exclude_frames: Tuple[Type[Frame], ...] = (InputAudioRawFrame, BotSpeakingFrame),
