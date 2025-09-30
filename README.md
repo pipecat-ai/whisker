@@ -25,20 +25,20 @@ Think of Whisker as **trace logging with batteries**.
 
 ## 🧭 Getting started
 
-**Requirements:**
+### Requirements
 
 - Python 3.10+
 - [Pipecat](https://github.com/pipecat-ai/pipecat) installed
 - Node.js 20+ (for the UI)
 - [ngrok](https://ngrok.com/) (for connecting to the hosted UI)
 
-### 1. Install Whisker for Python
+### Install Whisker for Python
 
 ```bash
 uv pip install pipecat-ai-whisker
 ```
 
-### 2. Add Whisker to your Pipecat pipeline
+### Add Whisker to your Pipecat pipeline
 
 ```python
 from pipecat_whisker import WhiskerObserver
@@ -56,11 +56,7 @@ This starts the Whisker server that the graphical UI will connect to. By default
 ws://localhost:9090
 ```
 
-### 3. Connect to the Whisker UI
-
-You have two options to access the Whisker UI:
-
-#### 🌐 Option A: Use the hosted UI (Recommended)
+### 🌐 Option A: Use the hosted UI (Recommended)
 
 1. **Expose your local server with ngrok:**
    ```bash
@@ -74,7 +70,7 @@ You have two options to access the Whisker UI:
    - In the WebSocket URL field, enter: `wss://your-ngrok-url.ngrok.io`
    - Click connect
 
-#### 🏠 Option B: Run the UI locally
+### 🏠 Option B: Run the UI locally
 
 If you prefer to run the UI locally:
 
