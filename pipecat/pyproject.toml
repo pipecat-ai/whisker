@@ -36,9 +36,9 @@ dev = [
     "build~=1.2.2",
     "pip-tools~=7.4.1",
     "pre-commit~=4.2.0",
-    "pyright~=1.1.402",
+    "pyright>=1.1.404,<1.2",
     "python-dotenv>=1.0.1,<2.0.0",
-    "ruff~=0.12.1",
+    "ruff>=0.12.11,<1",
     "setuptools~=78.1.1",
     "setuptools_scm~=8.3.1",
 ]
