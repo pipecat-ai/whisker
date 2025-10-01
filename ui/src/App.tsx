@@ -32,8 +32,7 @@ export default function App() {
             <Pipeline />
           </div>
           <div className="footer-note" style={{ marginTop: 8 }}>
-            Tip: Click a processor node to inspect frames. Press{" "}
-            <span className="kbd">D</span> to toggle theme.
+            Tip: Click a processor node to inspect frames.
           </div>
         </div>
         <div className="card">

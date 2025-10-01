@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: BSD 2-Clause License
 //
 
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import { useStore } from "../state.store";
 import cls from "classnames";
 import { usePipecatSocket } from "../hooks.usePipecatSocket";
@@ -19,15 +19,6 @@ export function TopBar() {
   const resetPipeline = useStore((s) => s.resetPipeline);
   const { connect, disconnect } = usePipecatSocket();
   const { loadMessages } = useWhisker();
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key.toLowerCase() === "d")
-        setTheme(theme === "light" ? "dark" : "light");
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [theme, setTheme]);
 
   const handleButtonClick = () => {
     fileInputRef.current?.click(); // open file dialog
