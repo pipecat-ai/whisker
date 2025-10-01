@@ -37,8 +37,10 @@ export function FrameInspector() {
           padding: "8px 10px",
           fontSize: "14px",
           borderRadius: "8px",
-          border: "1px solid #ccc",
+          border: "1px solid var(--border)",
           margin: "4px 0 4px 0",
+          background: "var(--bg)",
+          color: "var(--text)",
         }}
       />
       <div className="pane">
