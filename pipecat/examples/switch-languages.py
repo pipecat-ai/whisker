@@ -29,7 +29,7 @@ from pipecat.transports.base_transport import BaseTransport, TransportParams
 from pipecat.transports.daily.transport import DailyParams
 from pipecat.transports.websocket.fastapi import FastAPIWebsocketParams
 
-from pipecat_whisker import WhiskerObserver
+from pipecat_whisker import WhiskerFrame, WhiskerObserver
 
 load_dotenv(override=True)
 
@@ -162,6 +162,8 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
     @transport.event_handler("on_client_connected")
     async def on_client_connected(transport, client):
         logger.info(f"Client connected")
+        # Whisker frame.
+        await task.queue_frame(WhiskerFrame())
         # Kick off the conversation.
         messages.append(
             {

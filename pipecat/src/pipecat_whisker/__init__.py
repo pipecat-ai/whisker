@@ -4,6 +4,7 @@
 # SPDX-License-Identifier: BSD 2-Clause License
 #
 
+from .frames import WhiskerFrame, WhiskerUrgentFrame
 from .observer import WhiskerObserver
 
-__all__ = ["WhiskerObserver"]
+__all__ = ["WhiskerObserver", "WhiskerFrame", "WhiskerUrgentFrame"]

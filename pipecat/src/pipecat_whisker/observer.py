@@ -42,6 +42,8 @@ from pipecat.processors.frame_processor import FrameProcessor
 from pydantic import BaseModel
 from websockets import ConnectionClosedOK, serve
 
+from pipecat_whisker.frames import WhiskerFrame, WhiskerUrgentFrame
+
 __PIPECAT_VERSION__ = version("pipecat-ai")
 __WHISKER_VERSION__ = version("pipecat-ai-whisker")
 __PYTHON_VERSION__ = sys.version
@@ -355,6 +357,16 @@ class WhiskerObserver(BaseObserver):
 
         await self._queue_data(msg_packed)
 
+    def _frame_type(self, frame: Frame) -> str:
+        frame_type = "frame"
+
+        if isinstance(frame, WhiskerFrame):
+            frame_type = "frame:whisker"
+        elif isinstance(frame, WhiskerUrgentFrame):
+            frame_type = "frame:whisker-urgent"
+
+        return frame_type
+
     async def _send_process_frame(self, data: FrameProcessed):
         """Send a frame processing event to the client.
 
@@ -365,8 +377,9 @@ class WhiskerObserver(BaseObserver):
         processor = data.processor
         direction = data.direction
         frame = data.frame
+        frame_type = self._frame_type(frame)
         msg = {
-            "type": "frame",
+            "type": frame_type,
             "id": self._id,
             "name": frame.name,
             "from": processor.name,
@@ -389,8 +402,9 @@ class WhiskerObserver(BaseObserver):
         processor = data.source
         direction = data.direction
         frame = data.frame
+        frame_type = self._frame_type(frame)
         msg = {
-            "type": "frame",
+            "type": frame_type,
             "id": self._id,
             "name": frame.name,
             "from": processor.name,
