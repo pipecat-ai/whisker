@@ -7,6 +7,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useStore } from "../state.store";
 import { FrameMessage } from "../types";
+import { useWhisker } from "../hooks.useWhisker";
 
 export function FrameInspector() {
   const [filter, setFilter] = useState("");
@@ -87,16 +88,15 @@ function FrameItem({
     }
   }, [isSelected]);
 
+  const { frameBackground } = useWhisker();
+
   return (
     <div
       key={`frame-${frame.id}-${idx}`}
       ref={ref}
       className="list-item"
       style={{
-        background:
-          frame.event === "process"
-            ? "rgba(16,185,129,0.15)"
-            : "rgba(59,130,246,0.15)",
+        background: frameBackground(frame),
         display: "flex",
         flexDirection: "column",
         cursor: "pointer",

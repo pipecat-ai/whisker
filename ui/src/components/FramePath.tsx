@@ -8,6 +8,7 @@ import React from "react";
 import { useEffect, useMemo, useRef } from "react";
 import { useStore } from "../state.store";
 import { FrameMessage, Processor } from "../types";
+import { useWhisker } from "../hooks.useWhisker";
 
 export function FramePath() {
   const frames = useStore((s) => s.frames);
@@ -118,6 +119,8 @@ const FramePathItem = React.forwardRef<HTMLDivElement, FramePathItemProps>(
       }
     }, [isSelected, ref]);
 
+    const { frameBackground } = useWhisker();
+
     return (
       <div
         ref={ref}
@@ -126,10 +129,7 @@ const FramePathItem = React.forwardRef<HTMLDivElement, FramePathItemProps>(
         className="list-item"
         tabIndex={0} // makes it keyboard focusable
         style={{
-          background:
-            frame.event === "process"
-              ? "rgba(16,185,129,0.15)"
-              : "rgba(59,130,246,0.15)",
+          background: frameBackground(frame),
           display: "flex",
           flexDirection: "column",
           border: isSelected ? "2px solid black" : "1px solid transparent",

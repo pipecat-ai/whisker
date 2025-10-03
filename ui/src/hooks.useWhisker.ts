@@ -12,6 +12,18 @@ export function useWhisker() {
   const setPipeline = useStore((s) => s.setPipeline);
   const pushFrames = useStore((s) => s.pushFrames);
 
+  const frameBackground = (frame) => {
+    if (frame.type === "frame:whisker") {
+      return "rgba(255, 205, 50, 0.40)";
+    } else if (frame.type === "frame:whisker-urgent") {
+      return "rgba(249,115,22,0.40)";
+    } else {
+      return frame.event === "process"
+        ? "rgba(16,185,129,0.15)"
+        : "rgba(59,130,246,0.15)";
+    }
+  };
+
   const loadMessages = (data) => {
     try {
       const frameMessages = [];
@@ -20,7 +32,7 @@ export function useWhisker() {
         if (msg.type === "pipeline") {
           // We only need one message
           setPipeline(msg);
-        } else if (msg.type === "frame") {
+        } else if (msg.type.startsWith("frame")) {
           frameMessages.push(msg);
         }
       }
@@ -30,5 +42,5 @@ export function useWhisker() {
     }
   };
 
-  return { loadMessages };
+  return { loadMessages, frameBackground };
 }
