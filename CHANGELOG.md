@@ -10,10 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Added Whisker frames: `WhiskerFrame` and `WhiskerUrgentFrame`. These frames
-  are used to communicate with Whisker directly, rather than being part of the
-  standard pipeline flow. They will be displayed in a different color so it's
-  easier to distinguish them. They can be used as a mark to to know when
-  something happened and easily see it in the Whisker client.
+  are used to communicate with Whisker directly and will be displayed in a
+  different color so it's easier to distinguish them. They can be used as a mark
+  to know when something happened and easily see it in the Whisker client.
 
 ### Fixed
 

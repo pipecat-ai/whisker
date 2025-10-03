@@ -7,8 +7,8 @@
 """Frame definitions for Whisker.
 
 This module defines special frames used by Whisker. These frames are used to
-communicate with Whisker directly, rather than being part of the standard
-pipeline flow.
+communicate with the Whisker client and are not meant to be part of the
+application data.
 
 """
 
