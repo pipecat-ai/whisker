@@ -5,6 +5,21 @@ All notable changes to **Whisker** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.10] - 2025-10-03
+
+### Added
+
+- Added Whisker frames: `WhiskerFrame` and `WhiskerUrgentFrame`. These frames
+  are used to communicate with Whisker directly, rather than being part of the
+  standard pipeline flow. They will be displayed in a different color so it's
+  easier to distinguish them. They can be used as a mark to to know when
+  something happened and easily see it in the Whisker client.
+
+### Fixed
+
+- Fixed a Whisker client issue that was causing a switch between light/dark
+  themes when pressing 'd' inside the filter.
+
 ## [0.0.9] - 2025-09-24
 
 ## Added
@@ -12,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The Whisker client now displays Whisker/Pipecat/Python/Platform versions. This
   can be useful to know in which system the observer is/was running.
 
-## Fixed
+### Fixed
 
 - Fixed an issue that would cause the client to display a blank page (with an
   error in the console) when loading a file after a previous network session was
@@ -20,7 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.0.8] - 2025-09-18
 
-## Changed
+### Changed
 
 - We now just write one single file instead of one per client session.
 
@@ -28,28 +43,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   whisker = WhiskerObserver(pipeline, file_name="whisker.bin")
   ```
 
-## Fixed
+### Fixed
 
 - Fixed a client issue that was causing the pipeline to be reset when receving
   messages.
 
 ## [0.0.7] - 2025-09-18
 
-## Added
+### Added
 
 - Allow saving sessions into a file and load them with the Whisker client.
 
-## Changed
+### Changed
 
 - Whisker now uses msgpack for streaming messages instead of JSON.
 
-## Fixed
+### Fixed
 
 - Fixed an issue where processor flashing would be delayed.
 
 ## [0.0.6] - 2025-08-29
 
-## Changed
+### Changed
 
 - `WhiskerObserver` serializer function now gets an initial `BaseObserver`
   argument.
@@ -64,7 +79,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   def serializer(frame: Frame)
   ```
 
-## Fixed
+### Fixed
 
 - Fixed a `WhiskerObserver` serialization issue and catch exceptions if
   serialization fails.
@@ -72,7 +87,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed an issue that would prevent `WhiskerObserver` from shutting down the
   pipeline. Needs pipecat-ai > 0.0.82.
 
-## Performance
+### Performance
 
 - Avoid `WhiskerObserver` deepcopy and simply serialize fields.
 
