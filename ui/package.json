@@ -21,8 +21,10 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@types/cytoscape-dagre": "^2.3.4",
     "@types/node": "^24.3.0",
     "@types/react": "^19.1.10",
+    "@types/react-cytoscapejs": "^1.2.6",
     "@types/react-dom": "^19.1.7",
     "typescript": "^5.9.2",
     "vite": "^7.1.3"
