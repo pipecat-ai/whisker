@@ -163,6 +163,10 @@ export function Pipeline() {
       elements={elements}
       style={{ width: "100%", height: "100%" }}
       stylesheet={stylesheet}
+      autoungrabify
+      userPanningEnabled
+      minZoom={0.5}
+      maxZoom={1.5}
     />
   );
 }
