@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2024–2025, Daily
+# Copyright (c) 2024–2026, Daily
 #
 # SPDX-License-Identifier: BSD 2-Clause License
 #
@@ -339,8 +339,9 @@ class WhiskerObserver(BaseObserver):
 
             return new_prev
 
-        # Pipeline will be connected to a source and sink in the pipeline task.
-        traverse(self._pipeline.previous, [], None)
+        # Internally, a pipeline is connected to a source (and sink), so we just
+        # grab its first processor.
+        traverse(self._pipeline.entry_processors[0], [], None)
 
         msg = {
             "type": "pipeline",

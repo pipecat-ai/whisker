@@ -21,6 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed an issue that could cause `WhiskerObserver` to crash if the given
+  pipeline didn't have a previous processor.
+
 - Fixed frame details not being selectable for copying by making only the
   header row clickable for expand/collapse.
 
