@@ -15,6 +15,8 @@ export function FrameInspector() {
   const [typeSearch, setTypeSearch] = useState("");
   const [showPush, setShowPush] = useState(true);
   const [showProcess, setShowProcess] = useState(true);
+  const [showUpstream, setShowUpstream] = useState(true);
+  const [showDownstream, setShowDownstream] = useState(true);
   const frames = useStore((s) => s.frames);
   const selected = useStore((s) => s.selectedProcessor);
   const selectedFrame = useStore((s) => s.selectedFrame);
@@ -51,8 +53,11 @@ export function FrameInspector() {
     filtered = filtered.filter(
       (f) => (f.event === "push" && showPush) || (f.event === "process" && showProcess)
     );
+    filtered = filtered.filter(
+      (f) => (f.direction === "upstream" && showUpstream) || (f.direction === "downstream" && showDownstream)
+    );
     return filtered.sort((a, b) => a.timestamp - b.timestamp);
-  }, [selectedTypes, allFrames, selected, showPush, showProcess]);
+  }, [selectedTypes, allFrames, selected, showPush, showProcess, showUpstream, showDownstream]);
 
   const toggleType = (type: string) => {
     setSelectedTypes((prev) => {
@@ -211,24 +216,46 @@ export function FrameInspector() {
           </div>
         )}
         </div>
-        <label style={{ display: "flex", alignItems: "center", gap: "4px", cursor: "pointer", fontSize: "14px", color: "var(--text)" }}>
-          <input
-            type="checkbox"
-            checked={showPush}
-            onChange={(e) => setShowPush(e.target.checked)}
-            style={{ cursor: "pointer" }}
-          />
-          PUSH
-        </label>
-        <label style={{ display: "flex", alignItems: "center", gap: "4px", cursor: "pointer", fontSize: "14px", color: "var(--text)" }}>
-          <input
-            type="checkbox"
-            checked={showProcess}
-            onChange={(e) => setShowProcess(e.target.checked)}
-            style={{ cursor: "pointer" }}
-          />
-          PROCESS
-        </label>
+        <div style={{ display: "flex", gap: "8px", padding: "6px 10px", border: "1px solid var(--border)", borderRadius: "8px" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: "4px", cursor: "pointer", fontSize: "14px", color: "var(--text)" }}>
+            <input
+              type="checkbox"
+              checked={showPush}
+              onChange={(e) => setShowPush(e.target.checked)}
+              style={{ cursor: "pointer" }}
+            />
+            PUSH
+          </label>
+          <label style={{ display: "flex", alignItems: "center", gap: "4px", cursor: "pointer", fontSize: "14px", color: "var(--text)" }}>
+            <input
+              type="checkbox"
+              checked={showProcess}
+              onChange={(e) => setShowProcess(e.target.checked)}
+              style={{ cursor: "pointer" }}
+            />
+            PROCESS
+          </label>
+        </div>
+        <div style={{ display: "flex", gap: "8px", padding: "6px 10px", border: "1px solid var(--border)", borderRadius: "8px" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: "4px", cursor: "pointer", fontSize: "14px", color: "var(--text)" }}>
+            <input
+              type="checkbox"
+              checked={showUpstream}
+              onChange={(e) => setShowUpstream(e.target.checked)}
+              style={{ cursor: "pointer" }}
+            />
+            UPSTREAM
+          </label>
+          <label style={{ display: "flex", alignItems: "center", gap: "4px", cursor: "pointer", fontSize: "14px", color: "var(--text)" }}>
+            <input
+              type="checkbox"
+              checked={showDownstream}
+              onChange={(e) => setShowDownstream(e.target.checked)}
+              style={{ cursor: "pointer" }}
+            />
+            DOWNSTREAM
+          </label>
+        </div>
       </div>
       <span
         style={{

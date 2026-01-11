@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added PUSH/PROCESS checkboxes to filter frames by event type.
 
+- Added UPSTREAM/DOWNSTREAM checkboxes to filter frames by direction.
+
 - Added frame count display showing the number of filtered frames out of the
   total.
 
