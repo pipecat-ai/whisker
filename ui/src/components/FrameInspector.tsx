@@ -51,13 +51,25 @@ export function FrameInspector() {
       filtered = filtered.filter((f) => selectedTypes.has(getBaseName(f.name)));
     }
     filtered = filtered.filter(
-      (f) => (f.event === "push" && showPush) || (f.event === "process" && showProcess)
+      (f) =>
+        (f.event === "push" && showPush) ||
+        (f.event === "process" && showProcess)
     );
     filtered = filtered.filter(
-      (f) => (f.direction === "upstream" && showUpstream) || (f.direction === "downstream" && showDownstream)
+      (f) =>
+        (f.direction === "upstream" && showUpstream) ||
+        (f.direction === "downstream" && showDownstream)
     );
     return filtered.sort((a, b) => a.timestamp - b.timestamp);
-  }, [selectedTypes, allFrames, selected, showPush, showProcess, showUpstream, showDownstream]);
+  }, [
+    selectedTypes,
+    allFrames,
+    selected,
+    showPush,
+    showProcess,
+    showUpstream,
+    showDownstream,
+  ]);
 
   const toggleType = (type: string) => {
     setSelectedTypes((prev) => {
@@ -108,116 +120,142 @@ export function FrameInspector() {
             </span>
             <span>{isFilterOpen ? "▲" : "▼"}</span>
           </button>
-        {isFilterOpen && (
-          <div
-            style={{
-              position: "absolute",
-              top: "100%",
-              left: 0,
-              right: 0,
-              background: "var(--bg)",
-              border: "1px solid var(--border)",
-              borderRadius: "8px",
-              zIndex: 100,
-              maxHeight: "300px",
-              overflowY: "auto",
-              boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-            }}
-          >
+          {isFilterOpen && (
             <div
               style={{
-                display: "flex",
-                gap: "8px",
-                padding: "8px",
-                borderBottom: "1px solid var(--border)",
+                position: "absolute",
+                top: "100%",
+                left: 0,
+                right: 0,
+                background: "var(--bg)",
+                border: "1px solid var(--border)",
+                borderRadius: "8px",
+                zIndex: 100,
+                maxHeight: "300px",
+                overflowY: "auto",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
               }}
             >
-              <button
-                onClick={selectAll}
-                style={{
-                  flex: 1,
-                  padding: "6px 8px",
-                  fontSize: "14px",
-                  borderRadius: "4px",
-                  border: "none",
-                  background: "var(--border)",
-                  color: "var(--text)",
-                  cursor: "pointer",
-                  fontWeight: 500,
-                }}
-              >
-                Select All
-              </button>
-              <button
-                onClick={clearAll}
-                style={{
-                  flex: 1,
-                  padding: "6px 8px",
-                  fontSize: "14px",
-                  borderRadius: "4px",
-                  border: "none",
-                  background: "var(--border)",
-                  color: "var(--text)",
-                  cursor: "pointer",
-                  fontWeight: 500,
-                }}
-              >
-                Clear All
-              </button>
-            </div>
-            <div style={{ padding: "8px", borderBottom: "1px solid var(--border)" }}>
-              <input
-                type="text"
-                placeholder="Search frames..."
-                value={typeSearch}
-                onChange={(e) => setTypeSearch(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "6px 8px",
-                  fontSize: "14px",
-                  borderRadius: "4px",
-                  border: "1px solid var(--border)",
-                  background: "var(--bg)",
-                  color: "var(--text)",
-                  boxSizing: "border-box",
-                }}
-              />
-            </div>
-            {filteredTypes.length === 0 ? (
               <div
-                style={{ padding: "12px", color: "var(--text)", opacity: 0.6 }}
+                style={{
+                  display: "flex",
+                  gap: "8px",
+                  padding: "8px",
+                  borderBottom: "1px solid var(--border)",
+                }}
               >
-                No frames available
-              </div>
-            ) : (
-              filteredTypes.map((type) => (
-                <label
-                  key={type}
+                <button
+                  onClick={selectAll}
                   style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    padding: "8px 12px",
-                    cursor: "pointer",
-                    borderBottom: "1px solid var(--border)",
+                    flex: 1,
+                    padding: "6px 8px",
                     fontSize: "14px",
+                    borderRadius: "4px",
+                    border: "none",
+                    background: "var(--border)",
+                    color: "var(--text)",
+                    cursor: "pointer",
+                    fontWeight: 500,
                   }}
                 >
-                  <input
-                    type="checkbox"
-                    checked={selectedTypes.has(type)}
-                    onChange={() => toggleType(type)}
-                    style={{ cursor: "pointer" }}
-                  />
-                  <span style={{ color: "var(--text)" }}>{type}</span>
-                </label>
-              ))
-            )}
-          </div>
-        )}
+                  Select All
+                </button>
+                <button
+                  onClick={clearAll}
+                  style={{
+                    flex: 1,
+                    padding: "6px 8px",
+                    fontSize: "14px",
+                    borderRadius: "4px",
+                    border: "none",
+                    background: "var(--border)",
+                    color: "var(--text)",
+                    cursor: "pointer",
+                    fontWeight: 500,
+                  }}
+                >
+                  Clear All
+                </button>
+              </div>
+              <div
+                style={{
+                  padding: "8px",
+                  borderBottom: "1px solid var(--border)",
+                }}
+              >
+                <input
+                  type="text"
+                  placeholder="Search frames..."
+                  value={typeSearch}
+                  onChange={(e) => setTypeSearch(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "6px 8px",
+                    fontSize: "14px",
+                    borderRadius: "4px",
+                    border: "1px solid var(--border)",
+                    background: "var(--bg)",
+                    color: "var(--text)",
+                    boxSizing: "border-box",
+                  }}
+                />
+              </div>
+              {filteredTypes.length === 0 ? (
+                <div
+                  style={{
+                    padding: "12px",
+                    color: "var(--text)",
+                    opacity: 0.6,
+                  }}
+                >
+                  No frames available
+                </div>
+              ) : (
+                filteredTypes.map((type) => (
+                  <label
+                    key={type}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      padding: "8px 12px",
+                      cursor: "pointer",
+                      borderBottom: "1px solid var(--border)",
+                      fontSize: "14px",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedTypes.has(type)}
+                      onChange={() => toggleType(type)}
+                      style={{ cursor: "pointer" }}
+                    />
+                    <span style={{ color: "var(--text)" }}>{type}</span>
+                  </label>
+                ))
+              )}
+            </div>
+          )}
         </div>
-        <div style={{ display: "flex", gap: "8px", padding: "6px 10px", border: "1px solid var(--border)", borderRadius: "8px" }}>
-          <label style={{ display: "flex", alignItems: "center", gap: "4px", cursor: "pointer", fontSize: "14px", color: "var(--text)" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: "8px",
+            padding: "6px 10px",
+            border: "1px solid var(--border)",
+            borderRadius: "8px",
+          }}
+        >
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "4px",
+              cursor: "pointer",
+              fontSize: "14px",
+              color: "var(--text)",
+            }}
+          >
             <input
               type="checkbox"
               checked={showPush}
@@ -226,7 +264,16 @@ export function FrameInspector() {
             />
             PUSH
           </label>
-          <label style={{ display: "flex", alignItems: "center", gap: "4px", cursor: "pointer", fontSize: "14px", color: "var(--text)" }}>
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "4px",
+              cursor: "pointer",
+              fontSize: "14px",
+              color: "var(--text)",
+            }}
+          >
             <input
               type="checkbox"
               checked={showProcess}
@@ -236,8 +283,25 @@ export function FrameInspector() {
             PROCESS
           </label>
         </div>
-        <div style={{ display: "flex", gap: "8px", padding: "6px 10px", border: "1px solid var(--border)", borderRadius: "8px" }}>
-          <label style={{ display: "flex", alignItems: "center", gap: "4px", cursor: "pointer", fontSize: "14px", color: "var(--text)" }}>
+        <div
+          style={{
+            display: "flex",
+            gap: "8px",
+            padding: "6px 10px",
+            border: "1px solid var(--border)",
+            borderRadius: "8px",
+          }}
+        >
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "4px",
+              cursor: "pointer",
+              fontSize: "14px",
+              color: "var(--text)",
+            }}
+          >
             <input
               type="checkbox"
               checked={showUpstream}
@@ -246,7 +310,16 @@ export function FrameInspector() {
             />
             UPSTREAM
           </label>
-          <label style={{ display: "flex", alignItems: "center", gap: "4px", cursor: "pointer", fontSize: "14px", color: "var(--text)" }}>
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "4px",
+              cursor: "pointer",
+              fontSize: "14px",
+              color: "var(--text)",
+            }}
+          >
             <input
               type="checkbox"
               checked={showDownstream}
