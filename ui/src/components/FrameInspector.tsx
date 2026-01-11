@@ -13,6 +13,8 @@ export function FrameInspector() {
   const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set());
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [typeSearch, setTypeSearch] = useState("");
+  const [showPush, setShowPush] = useState(true);
+  const [showProcess, setShowProcess] = useState(true);
   const frames = useStore((s) => s.frames);
   const selected = useStore((s) => s.selectedProcessor);
   const selectedFrame = useStore((s) => s.selectedFrame);
@@ -42,12 +44,15 @@ export function FrameInspector() {
 
   const sortedFrames = useMemo(() => {
     if (!selected) return [];
-    const filtered =
-      selectedTypes.size === 0
-        ? allFrames
-        : allFrames.filter((f) => selectedTypes.has(getBaseName(f.name)));
+    let filtered = allFrames;
+    if (selectedTypes.size > 0) {
+      filtered = filtered.filter((f) => selectedTypes.has(getBaseName(f.name)));
+    }
+    filtered = filtered.filter(
+      (f) => (f.event === "push" && showPush) || (f.event === "process" && showProcess)
+    );
     return filtered.sort((a, b) => a.timestamp - b.timestamp);
-  }, [selectedTypes, allFrames, selected]);
+  }, [selectedTypes, allFrames, selected, showPush, showProcess]);
 
   const toggleType = (type: string) => {
     setSelectedTypes((prev) => {
@@ -71,32 +76,33 @@ export function FrameInspector() {
 
   return (
     <div className="split">
-      <div style={{ position: "relative" }}>
-        <button
-          onClick={() => setIsFilterOpen(!isFilterOpen)}
-          style={{
-            width: "100%",
-            padding: "8px 10px",
-            fontSize: "14px",
-            borderRadius: "8px",
-            border: "1px solid var(--border)",
-            margin: "4px 0 4px 0",
-            background: "var(--bg)",
-            color: "var(--text)",
-            cursor: "pointer",
-            textAlign: "left",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <span>
-            {selectedTypes.size === 0
-              ? "All frames"
-              : `${selectedTypes.size} frame type${selectedTypes.size > 1 ? "s" : ""} selected`}
-          </span>
-          <span>{isFilterOpen ? "▲" : "▼"}</span>
-        </button>
+      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        <div style={{ position: "relative", flex: 1 }}>
+          <button
+            onClick={() => setIsFilterOpen(!isFilterOpen)}
+            style={{
+              width: "100%",
+              padding: "8px 10px",
+              fontSize: "14px",
+              borderRadius: "8px",
+              border: "1px solid var(--border)",
+              margin: "4px 0 4px 0",
+              background: "var(--bg)",
+              color: "var(--text)",
+              cursor: "pointer",
+              textAlign: "left",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <span>
+              {selectedTypes.size === 0
+                ? "All frames"
+                : `${selectedTypes.size} frame type${selectedTypes.size > 1 ? "s" : ""} selected`}
+            </span>
+            <span>{isFilterOpen ? "▲" : "▼"}</span>
+          </button>
         {isFilterOpen && (
           <div
             style={{
@@ -204,6 +210,25 @@ export function FrameInspector() {
             )}
           </div>
         )}
+        </div>
+        <label style={{ display: "flex", alignItems: "center", gap: "4px", cursor: "pointer", fontSize: "14px", color: "var(--text)" }}>
+          <input
+            type="checkbox"
+            checked={showPush}
+            onChange={(e) => setShowPush(e.target.checked)}
+            style={{ cursor: "pointer" }}
+          />
+          PUSH
+        </label>
+        <label style={{ display: "flex", alignItems: "center", gap: "4px", cursor: "pointer", fontSize: "14px", color: "var(--text)" }}>
+          <input
+            type="checkbox"
+            checked={showProcess}
+            onChange={(e) => setShowProcess(e.target.checked)}
+            style={{ cursor: "pointer" }}
+          />
+          PROCESS
+        </label>
       </div>
       <div className="pane">
         <div className="list">

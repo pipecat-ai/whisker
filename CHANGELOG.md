@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added multi-select frame type filter with search capability, replacing the
   previous text input filter.
 
+- Added PUSH/PROCESS checkboxes to filter frames by event type.
+
 ## [0.0.10] - 2025-10-03
 
 ### Added
