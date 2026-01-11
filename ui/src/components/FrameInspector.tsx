@@ -230,6 +230,16 @@ export function FrameInspector() {
           PROCESS
         </label>
       </div>
+      <span
+        style={{
+          fontSize: "14px",
+          color: "var(--text)",
+          opacity: 0.7,
+          margin: "4px 0",
+        }}
+      >
+        Showing {sortedFrames.length} frames out of {allFrames.length}
+      </span>
       <div className="pane">
         <div className="list">
           {sortedFrames.length === 0 && (
