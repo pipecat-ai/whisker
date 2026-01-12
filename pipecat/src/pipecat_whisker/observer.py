@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2024–2025, Daily
+# Copyright (c) 2024–2026, Daily
 #
 # SPDX-License-Identifier: BSD 2-Clause License
 #
@@ -36,7 +36,7 @@ import msgpack
 from loguru import logger
 from pipecat.frames.frames import BotSpeakingFrame, Frame, InputAudioRawFrame
 from pipecat.observers.base_observer import BaseObserver, FrameProcessed, FramePushed
-from pipecat.pipeline.pipeline import Pipeline
+from pipecat.pipeline.base_pipeline import BasePipeline
 from pipecat.processors.aggregators.openai_llm_context import OpenAILLMContext
 from pipecat.processors.frame_processor import FrameProcessor
 from pydantic import BaseModel
@@ -112,7 +112,7 @@ class WhiskerObserver(BaseObserver):
 
     def __init__(
         self,
-        pipeline: Pipeline,
+        pipeline: BasePipeline,
         *,
         host: str = "localhost",
         port: int = 9090,
@@ -339,8 +339,9 @@ class WhiskerObserver(BaseObserver):
 
             return new_prev
 
-        # Pipeline will be connected to a source and sink in the pipeline task.
-        traverse(self._pipeline.previous, [], None)
+        # Internally, a pipeline is connected to a source (and sink), so we just
+        # grab its first processor.
+        traverse(self._pipeline.entry_processors[0], [], None)
 
         msg = {
             "type": "pipeline",
