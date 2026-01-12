@@ -17,8 +17,8 @@ body:
   - type: input
     id: whisker-version
     attributes:
-      label: whisker version
-      description: Which version are you using?
+      label: Whisker version
+      description: Which Whisker version are you using?
       placeholder: e.g., 0.0.1
     validations:
       required: true
@@ -26,7 +26,7 @@ body:
   - type: input
     id: pipecat-version
     attributes:
-      label: whisker version
+      label: Pipecat version
       description: Which Pipecat version are you using?
       placeholder: e.g., 0.0.81
     validations:
