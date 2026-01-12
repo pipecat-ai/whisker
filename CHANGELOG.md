@@ -21,6 +21,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed an issue where the buffer data was not being sent to the client when
+  closing.
+
+- Fixed an issue that was causing data to be written to the output file after
+  the file was already closed.
+
 - Fixed an issue that could cause `WhiskerObserver` to crash if the given
   pipeline didn't have a previous processor.
 
