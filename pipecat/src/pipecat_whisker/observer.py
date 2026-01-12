@@ -146,7 +146,7 @@ class WhiskerObserver(BaseObserver):
         self._id = 0
         self._client = None
         self._server_future = asyncio.get_running_loop().create_future()
-        self._server_task = asyncio.create_task(self._start_task_handler())
+        self._server_task = asyncio.create_task(self._server_task_handler())
         self._send_task = asyncio.create_task(self._send_task_handler())
         self._send_queue = asyncio.Queue()
         self._batch = []
@@ -158,16 +158,13 @@ class WhiskerObserver(BaseObserver):
         """Clean up resources and close the Whisker server."""
         await super().cleanup()
 
+        await self._stop_send_task()
+
+        await self._close_client()
+
+        await self._stop_server()
+
         await self._maybe_close_file()
-
-        if self._client:
-            await self._client.close(reason="Whisker shutting down")
-
-        if not self._server_future.done():
-            self._server_future.set_result(None)
-
-        if self._server_task:
-            await self._server_task
 
     async def on_process_frame(self, data: FrameProcessed):
         """Handle frame processing events.
@@ -187,7 +184,7 @@ class WhiskerObserver(BaseObserver):
         if not isinstance(data.frame, self._exclude_frames):
             await self._send_push_frame(data)
 
-    async def _start_task_handler(self):
+    async def _server_task_handler(self):
         """Start the Whisker server and handle incoming connections.
 
         This method runs in a separate task and manages the websocket server lifecycle.
@@ -198,11 +195,18 @@ class WhiskerObserver(BaseObserver):
         # Queue initial pipeline structure
         await self._send_pipeline()
 
-        async with serve(self._server_handler, self._host, self._port):
+        async with serve(self._client_handler, self._host, self._port):
             logger.debug(f"ᓚᘏᗢ Whisker running at ws://{self._host}:{self._port}")
             await self._server_future
 
-    async def _server_handler(self, client):
+    async def _stop_server(self):
+        if not self._server_future.done():
+            self._server_future.set_result(None)
+
+        if self._server_task:
+            await self._server_task
+
+    async def _client_handler(self, client):
         """Handle a new Whisker client connection.
 
         Args:
@@ -227,6 +231,10 @@ class WhiskerObserver(BaseObserver):
             logger.debug("ᓚᘏᗢ Whisker: client disconnected")
             await self._reset_client()
 
+    async def _close_client(self):
+        if self._client:
+            await self._client.close(reason="Whisker shutting down")
+
     async def _reset_client(self):
         self._client = None
 
@@ -243,17 +251,26 @@ class WhiskerObserver(BaseObserver):
 
     async def _send_task_handler(self):
         """Handle sending batched messages to the client."""
-        while True:
+        running = True
+        while running:
             try:
                 data, flush = await asyncio.wait_for(self._send_queue.get(), timeout=0.5)
 
-                self._batch.append(data)
+                if data:
+                    self._batch.append(data)
 
                 await self._maybe_send_batch(flush=flush)
 
                 self._send_queue.task_done()
+
+                running = data is not None
             except asyncio.TimeoutError:
                 await self._maybe_send_batch(flush=True)
+
+    async def _stop_send_task(self):
+        await self._queue_data(None, True)
+        if self._send_task:
+            await self._send_task
 
     async def _maybe_send_batch(self, *, flush: bool = False):
         """Send batched messages to the client.
@@ -418,9 +435,9 @@ class WhiskerObserver(BaseObserver):
 
         await self._queue_data(msg_packed)
 
-    async def _queue_data(self, msg: bytes, flush: bool = False):
+    async def _queue_data(self, msg: Optional[bytes], flush: bool = False):
         await self._send_queue.put((msg, flush))
-        if self._file:
+        if self._file and msg:
             await self._file.write(msg)
 
     async def _send(self, msg: bytes):
