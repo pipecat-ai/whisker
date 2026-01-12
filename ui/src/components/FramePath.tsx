@@ -43,7 +43,15 @@ export function FramePath() {
     timeline.sort((a, b) => a.frame.timestamp - b.frame.timestamp);
 
     return timeline;
-  }, [frames, framePaths, processors, selectedFrame, selectedFramePath, showPush, showProcess]);
+  }, [
+    frames,
+    framePaths,
+    processors,
+    selectedFrame,
+    selectedFramePath,
+    showPush,
+    showProcess,
+  ]);
 
   const refs = useRef<(HTMLDivElement | null)[]>([]);
 
