@@ -9,6 +9,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useStore } from "../state.store";
 import { FrameMessage, Processor } from "../types";
 import { useWhisker } from "../hooks.useWhisker";
+import cls from "classnames";
 
 export function FramePath() {
   const frames = useStore((s) => s.frames);
@@ -19,6 +20,8 @@ export function FramePath() {
   const setSelectedFrame = useStore((s) => s.setSelectedFrame);
   const setSelectedFramePath = useStore((s) => s.setSelectedFramePath);
   const setSelectedProcessor = useStore((s) => s.setSelectedProcessorById);
+  const showPush = useStore((s) => s.showPush);
+  const showProcess = useStore((s) => s.showProcess);
 
   const frameTimeline = useMemo(() => {
     if (!selectedFrame) return [];
@@ -28,6 +31,11 @@ export function FramePath() {
     const timeline = processors.flatMap((proc) => {
       return (frames[proc.id] || [])
         .filter((frame) => frame.name === selectedFrame.name)
+        .filter(
+          (frame) =>
+            (frame.event === "push" && showPush) ||
+            (frame.event === "process" && showProcess)
+        )
         .map((frame) => ({ processor: proc, frame }));
     });
 
@@ -35,7 +43,7 @@ export function FramePath() {
     timeline.sort((a, b) => a.frame.timestamp - b.frame.timestamp);
 
     return timeline;
-  }, [frames, framePaths, processors, selectedFrame, selectedFramePath]);
+  }, [frames, framePaths, processors, selectedFrame, selectedFramePath, showPush, showProcess]);
 
   const refs = useRef<(HTMLDivElement | null)[]>([]);
 
@@ -51,7 +59,7 @@ export function FramePath() {
   }, [selectedFramePath, frameTimeline]);
 
   return (
-    <div className="split">
+    <div className="pane-container">
       <div className="pane">
         <div className="list">
           {frameTimeline.length === 0 && (
@@ -126,18 +134,13 @@ const FramePathItem = React.forwardRef<HTMLDivElement, FramePathItemProps>(
         ref={ref}
         key={`path-${frame.id}-${idx}`}
         data-key={`path-${frame.id}-${idx}`}
-        className="list-item"
+        className={cls("list-item", "frame-item", { selected: isSelected })}
         tabIndex={0} // makes it keyboard focusable
-        style={{
-          background: frameBackground(frame),
-          display: "flex",
-          flexDirection: "column",
-          border: isSelected ? "2px solid black" : "1px solid transparent",
-        }}
+        style={{ background: frameBackground(frame) }}
         onClick={onClick}
         onKeyDown={onKeyDown}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <div className="frame-header">
           <span>{frame.direction === "upstream" ? "⬆️️" : "⬇️️"}</span>
           <span>
             <b>{frame.event === "process" ? "PROCESS ⚙️️" : "PUSH 🚀"}</b>

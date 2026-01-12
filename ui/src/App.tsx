@@ -31,12 +31,12 @@ export default function App() {
           <div className="graph">
             <Pipeline />
           </div>
-          <div className="footer-note" style={{ marginTop: 8 }}>
+          <div className="footer-note mt-md">
             Tip: Click a processor node to inspect frames.
           </div>
         </div>
         <div className="card">
-          <div className="card" style={{ flex: 2 }}>
+          <div className="card flex-2">
             <h3>
               Frames{" "}
               {selectedProcessor
@@ -45,13 +45,13 @@ export default function App() {
             </h3>
             <FrameInspector />
           </div>
-          <div className="card" style={{ flex: 1, marginTop: "1rem" }}>
+          <div className="card flex-1 mt-lg">
             <h3>
               Frame path {selectedFrame ? `(frame: ${selectedFrame.name})` : ""}
             </h3>
             <FramePath />
           </div>
-          <div className="footer-note" style={{ marginTop: 8 }}>
+          <div className="footer-note mt-md">
             Tip: Click a frame in the path and press{" "}
             <span className="kbd">Up</span> or <span className="kbd">Down</span>{" "}
             to move between processors.

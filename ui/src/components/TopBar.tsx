@@ -54,10 +54,7 @@ export function TopBar() {
   return (
     <div className="topbar">
       <div className="brand">ᓚᘏᗢ Whisker</div>
-      <span
-        className={cls("pill")}
-        style={{ borderColor: connected ? "var(--accent)" : "var(--danger)" }}
-      >
+      <span className={cls("pill", { connected, disconnected: !connected })}>
         {connected ? "Connected" : "Disconnected"}
       </span>
       <input
@@ -83,18 +80,17 @@ export function TopBar() {
       <input
         type="file"
         ref={fileInputRef}
-        style={{ display: "none" }}
+        className="hidden"
         onChange={handleFileChange}
       />
 
       {/* Spacer pushes next item to far right */}
-      <div style={{ flex: 1 }} />
+      <div className="spacer" />
 
       <div>Tip: Connect any time, frames are buffered while disconnected.</div>
 
       <button
-        className="btn"
-        style={{ color: "var(--text)" }}
+        className="btn btn-theme"
         onClick={() => setTheme(theme === "light" ? "dark" : "light")}
       >
         {theme === "light" ? "🌙 Dark" : "☀️ Light"}
