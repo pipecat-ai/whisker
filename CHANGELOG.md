@@ -19,6 +19,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added frame count display showing the number of filtered frames out of the
   total.
 
+### Fixed
+
+- Fixed frame details not being selectable for copying by making only the
+  header row clickable for expand/collapse.
+
 ## [0.0.10] - 2025-10-03
 
 ### Added

@@ -395,12 +395,18 @@ function FrameItem({
         background: frameBackground(frame),
         display: "flex",
         flexDirection: "column",
-        cursor: "pointer",
         border: isSelected ? "2px solid black" : "1px solid transparent",
       }}
-      onClick={onClick}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          cursor: "pointer",
+        }}
+        onClick={onClick}
+      >
         <span>{frame.direction === "upstream" ? "⬆️️" : "⬇️️"}</span>
         <span>
           <b>{frame.event === "process" ? "PROCESS ⚙️️" : "PUSH 🚀"}</b>
@@ -414,7 +420,7 @@ function FrameItem({
       {isSelected && (
         <div
           className="footer-note"
-          style={{ whiteSpace: "pre-wrap", marginTop: 4 }}
+          style={{ whiteSpace: "pre-wrap", marginTop: 4, userSelect: "text" }}
         >
           {JSON.stringify(frame.payload, null, 2)}
         </div>

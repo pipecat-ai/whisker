@@ -152,7 +152,6 @@ body {
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--bg);
-  cursor: pointer;
 }
 .list-item:hover {
   outline: 2px solid var(--primary);
