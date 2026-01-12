@@ -9,6 +9,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useStore } from "../state.store";
 import { FrameMessage, Processor } from "../types";
 import { useWhisker } from "../hooks.useWhisker";
+import cls from "classnames";
 
 export function FramePath() {
   const frames = useStore((s) => s.frames);
@@ -51,7 +52,7 @@ export function FramePath() {
   }, [selectedFramePath, frameTimeline]);
 
   return (
-    <div className="split">
+    <div className="pane-container">
       <div className="pane">
         <div className="list">
           {frameTimeline.length === 0 && (
@@ -126,18 +127,13 @@ const FramePathItem = React.forwardRef<HTMLDivElement, FramePathItemProps>(
         ref={ref}
         key={`path-${frame.id}-${idx}`}
         data-key={`path-${frame.id}-${idx}`}
-        className="list-item"
+        className={cls("list-item", "frame-item", { selected: isSelected })}
         tabIndex={0} // makes it keyboard focusable
-        style={{
-          background: frameBackground(frame),
-          display: "flex",
-          flexDirection: "column",
-          border: isSelected ? "2px solid black" : "1px solid transparent",
-        }}
+        style={{ background: frameBackground(frame) }}
         onClick={onClick}
         onKeyDown={onKeyDown}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <div className="frame-header">
           <span>{frame.direction === "upstream" ? "⬆️️" : "⬇️️"}</span>
           <span>
             <b>{frame.event === "process" ? "PROCESS ⚙️️" : "PUSH 🚀"}</b>

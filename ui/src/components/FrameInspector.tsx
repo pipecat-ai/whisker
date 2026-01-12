@@ -8,6 +8,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useStore } from "../state.store";
 import { FrameMessage } from "../types";
 import { useWhisker } from "../hooks.useWhisker";
+import cls from "classnames";
 
 export function FrameInspector() {
   const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set());
@@ -93,25 +94,11 @@ export function FrameInspector() {
 
   return (
     <div className="split">
-      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-        <div style={{ position: "relative", flex: 1 }}>
+      <div className="filter-row">
+        <div className="filter-dropdown">
           <button
+            className="filter-button"
             onClick={() => setIsFilterOpen(!isFilterOpen)}
-            style={{
-              width: "100%",
-              padding: "8px 10px",
-              fontSize: "14px",
-              borderRadius: "8px",
-              border: "1px solid var(--border)",
-              margin: "4px 0 4px 0",
-              background: "var(--bg)",
-              color: "var(--text)",
-              cursor: "pointer",
-              textAlign: "left",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
           >
             <span>
               {selectedTypes.size === 0
@@ -121,223 +108,79 @@ export function FrameInspector() {
             <span>{isFilterOpen ? "▲" : "▼"}</span>
           </button>
           {isFilterOpen && (
-            <div
-              style={{
-                position: "absolute",
-                top: "100%",
-                left: 0,
-                right: 0,
-                background: "var(--bg)",
-                border: "1px solid var(--border)",
-                borderRadius: "8px",
-                zIndex: 100,
-                maxHeight: "300px",
-                overflowY: "auto",
-                boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  gap: "8px",
-                  padding: "8px",
-                  borderBottom: "1px solid var(--border)",
-                }}
-              >
-                <button
-                  onClick={selectAll}
-                  style={{
-                    flex: 1,
-                    padding: "6px 8px",
-                    fontSize: "14px",
-                    borderRadius: "4px",
-                    border: "none",
-                    background: "var(--border)",
-                    color: "var(--text)",
-                    cursor: "pointer",
-                    fontWeight: 500,
-                  }}
-                >
+            <div className="filter-menu">
+              <div className="filter-menu-header">
+                <button className="btn-sm" onClick={selectAll}>
                   Select All
                 </button>
-                <button
-                  onClick={clearAll}
-                  style={{
-                    flex: 1,
-                    padding: "6px 8px",
-                    fontSize: "14px",
-                    borderRadius: "4px",
-                    border: "none",
-                    background: "var(--border)",
-                    color: "var(--text)",
-                    cursor: "pointer",
-                    fontWeight: 500,
-                  }}
-                >
+                <button className="btn-sm" onClick={clearAll}>
                   Clear All
                 </button>
               </div>
-              <div
-                style={{
-                  padding: "8px",
-                  borderBottom: "1px solid var(--border)",
-                }}
-              >
+              <div className="filter-menu-search">
                 <input
                   type="text"
+                  className="filter-input"
                   placeholder="Search frames..."
                   value={typeSearch}
                   onChange={(e) => setTypeSearch(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "6px 8px",
-                    fontSize: "14px",
-                    borderRadius: "4px",
-                    border: "1px solid var(--border)",
-                    background: "var(--bg)",
-                    color: "var(--text)",
-                    boxSizing: "border-box",
-                  }}
                 />
               </div>
               {filteredTypes.length === 0 ? (
-                <div
-                  style={{
-                    padding: "12px",
-                    color: "var(--text)",
-                    opacity: 0.6,
-                  }}
-                >
-                  No frames available
-                </div>
+                <div className="filter-menu-empty">No frames available</div>
               ) : (
                 filteredTypes.map((type) => (
-                  <label
-                    key={type}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      padding: "8px 12px",
-                      cursor: "pointer",
-                      borderBottom: "1px solid var(--border)",
-                      fontSize: "14px",
-                    }}
-                  >
+                  <label key={type} className="filter-menu-item">
                     <input
                       type="checkbox"
                       checked={selectedTypes.has(type)}
                       onChange={() => toggleType(type)}
-                      style={{ cursor: "pointer" }}
                     />
-                    <span style={{ color: "var(--text)" }}>{type}</span>
+                    <span>{type}</span>
                   </label>
                 ))
               )}
             </div>
           )}
         </div>
-        <div
-          style={{
-            display: "flex",
-            gap: "8px",
-            padding: "6px 10px",
-            border: "1px solid var(--border)",
-            borderRadius: "8px",
-          }}
-        >
-          <label
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "4px",
-              cursor: "pointer",
-              fontSize: "14px",
-              color: "var(--text)",
-            }}
-          >
+        <div className="checkbox-group">
+          <label className="checkbox-label">
             <input
               type="checkbox"
               checked={showPush}
               onChange={(e) => setShowPush(e.target.checked)}
-              style={{ cursor: "pointer" }}
             />
             PUSH
           </label>
-          <label
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "4px",
-              cursor: "pointer",
-              fontSize: "14px",
-              color: "var(--text)",
-            }}
-          >
+          <label className="checkbox-label">
             <input
               type="checkbox"
               checked={showProcess}
               onChange={(e) => setShowProcess(e.target.checked)}
-              style={{ cursor: "pointer" }}
             />
             PROCESS
           </label>
         </div>
-        <div
-          style={{
-            display: "flex",
-            gap: "8px",
-            padding: "6px 10px",
-            border: "1px solid var(--border)",
-            borderRadius: "8px",
-          }}
-        >
-          <label
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "4px",
-              cursor: "pointer",
-              fontSize: "14px",
-              color: "var(--text)",
-            }}
-          >
+        <div className="checkbox-group">
+          <label className="checkbox-label">
             <input
               type="checkbox"
               checked={showUpstream}
               onChange={(e) => setShowUpstream(e.target.checked)}
-              style={{ cursor: "pointer" }}
             />
             UPSTREAM
           </label>
-          <label
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "4px",
-              cursor: "pointer",
-              fontSize: "14px",
-              color: "var(--text)",
-            }}
-          >
+          <label className="checkbox-label">
             <input
               type="checkbox"
               checked={showDownstream}
               onChange={(e) => setShowDownstream(e.target.checked)}
-              style={{ cursor: "pointer" }}
             />
             DOWNSTREAM
           </label>
         </div>
       </div>
-      <span
-        style={{
-          fontSize: "14px",
-          color: "var(--text)",
-          opacity: 0.7,
-          margin: "4px 0",
-        }}
-      >
+      <span className="frame-count">
         Showing {sortedFrames.length} frames out of {allFrames.length}
       </span>
       <div className="pane">
@@ -390,23 +233,10 @@ function FrameItem({
     <div
       key={`frame-${frame.id}-${idx}`}
       ref={ref}
-      className="list-item"
-      style={{
-        background: frameBackground(frame),
-        display: "flex",
-        flexDirection: "column",
-        border: isSelected ? "2px solid black" : "1px solid transparent",
-      }}
+      className={cls("list-item", "frame-item", { selected: isSelected })}
+      style={{ background: frameBackground(frame) }}
     >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-          cursor: "pointer",
-        }}
-        onClick={onClick}
-      >
+      <div className="frame-header" onClick={onClick}>
         <span>{frame.direction === "upstream" ? "⬆️️" : "⬇️️"}</span>
         <span>
           <b>{frame.event === "process" ? "PROCESS ⚙️️" : "PUSH 🚀"}</b>
@@ -415,13 +245,10 @@ function FrameItem({
         <span className="footer-note">
           • {new Date(frame.timestamp).toISOString()}
         </span>
-        <span style={{ marginLeft: "auto" }}>{isSelected ? "▼" : "▶"}</span>
+        <span className="ml-auto">{isSelected ? "▼" : "▶"}</span>
       </div>
       {isSelected && (
-        <div
-          className="footer-note"
-          style={{ whiteSpace: "pre-wrap", marginTop: 4, userSelect: "text" }}
-        >
+        <div className="footer-note frame-details">
           {JSON.stringify(frame.payload, null, 2)}
         </div>
       )}
