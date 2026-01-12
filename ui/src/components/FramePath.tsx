@@ -20,6 +20,8 @@ export function FramePath() {
   const setSelectedFrame = useStore((s) => s.setSelectedFrame);
   const setSelectedFramePath = useStore((s) => s.setSelectedFramePath);
   const setSelectedProcessor = useStore((s) => s.setSelectedProcessorById);
+  const showPush = useStore((s) => s.showPush);
+  const showProcess = useStore((s) => s.showProcess);
 
   const frameTimeline = useMemo(() => {
     if (!selectedFrame) return [];
@@ -29,6 +31,11 @@ export function FramePath() {
     const timeline = processors.flatMap((proc) => {
       return (frames[proc.id] || [])
         .filter((frame) => frame.name === selectedFrame.name)
+        .filter(
+          (frame) =>
+            (frame.event === "push" && showPush) ||
+            (frame.event === "process" && showProcess)
+        )
         .map((frame) => ({ processor: proc, frame }));
     });
 
@@ -36,7 +43,7 @@ export function FramePath() {
     timeline.sort((a, b) => a.frame.timestamp - b.frame.timestamp);
 
     return timeline;
-  }, [frames, framePaths, processors, selectedFrame, selectedFramePath]);
+  }, [frames, framePaths, processors, selectedFrame, selectedFramePath, showPush, showProcess]);
 
   const refs = useRef<(HTMLDivElement | null)[]>([]);
 

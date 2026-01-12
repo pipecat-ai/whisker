@@ -14,11 +14,13 @@ export function FrameInspector() {
   const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set());
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [typeSearch, setTypeSearch] = useState("");
-  const [showPush, setShowPush] = useState(true);
-  const [showProcess, setShowProcess] = useState(true);
   const [showUpstream, setShowUpstream] = useState(true);
   const [showDownstream, setShowDownstream] = useState(true);
   const frames = useStore((s) => s.frames);
+  const showPush = useStore((s) => s.showPush);
+  const showProcess = useStore((s) => s.showProcess);
+  const setShowPush = useStore((s) => s.setShowPush);
+  const setShowProcess = useStore((s) => s.setShowProcess);
   const selected = useStore((s) => s.selectedProcessor);
   const selectedFrame = useStore((s) => s.selectedFrame);
   const setSelectedFrame = useStore((s) => s.setSelectedFrame);

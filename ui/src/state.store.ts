@@ -36,6 +36,12 @@ type State = {
   selectedFrame?: FrameMessage;
   selectedFramePath?: FrameMessage;
 
+  // Frame filters
+  showPush: boolean;
+  showProcess: boolean;
+  setShowPush: (v: boolean) => void;
+  setShowProcess: (v: boolean) => void;
+
   resetPipeline: () => void;
   setPipeline: (pipeline: PipelineMessage) => void;
   pushFrames: (frames: FrameMessage[]) => void;
@@ -72,6 +78,12 @@ export const useStore = create<State>((set, get) => ({
   selectedProcessor: undefined,
   selectedFrame: undefined,
   selectedFramePath: undefined,
+
+  // Frame filters
+  showPush: true,
+  showProcess: true,
+  setShowPush: (v) => set({ showPush: v }),
+  setShowProcess: (v) => set({ showProcess: v }),
 
   resetPipeline: () => {
     set({
