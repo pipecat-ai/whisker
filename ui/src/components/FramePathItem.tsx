@@ -4,7 +4,8 @@
 // SPDX-License-Identifier: BSD 2-Clause License
 //
 
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
+import { format } from "date-fns";
 import { FrameMessage, Processor } from "../types";
 import { useWhisker } from "../hooks.useWhisker";
 import { cn } from "@/lib/utils";
@@ -37,6 +38,11 @@ export const FramePathItem = React.forwardRef<
 
   const { frameBackground } = useWhisker();
 
+  const time = useMemo(
+    () => format(new Date(frame.timestamp), "HH:mm:ss"),
+    [frame.timestamp]
+  );
+
   return (
     <div
       ref={ref}
@@ -54,29 +60,27 @@ export const FramePathItem = React.forwardRef<
       onKeyDown={onKeyDown}
     >
       <div className="flex items-center gap-1.5">
-        <div className="flex items-center gap-1.5 w-28 flex-shrink-0">
+        <div className="flex items-center gap-2 w-12 md:w-28 flex-shrink-0">
           {frame.direction === "upstream" ? (
             <ArrowUp className="h-4 w-4" />
           ) : (
             <ArrowDown className="h-4 w-4" />
           )}
-          <span>
-            <b>
-              {frame.event === "process" ? (
-                <span className="uppercase">
-                  Process <Cpu className="h-3 w-3 inline" />
-                </span>
-              ) : (
-                <span className="uppercase">
-                  Push <Rocket className="h-3 w-3 inline" />
-                </span>
-              )}
-            </b>
-          </span>
+          <strong>
+            {frame.event === "process" ? (
+              <span className="uppercase">
+                <span className="sr-only md:not-sr-only">Process</span> <Cpu className="h-3 w-3 inline" />
+              </span>
+            ) : (
+              <span className="uppercase">
+                <span className="sr-only md:not-sr-only">Push</span> <Rocket className="h-3 w-3 inline" />
+              </span>
+            )}
+          </strong>
         </div>
-        <b className="flex-1 min-w-0">#{processor.name}</b>
+        <strong className="flex-1 min-w-0">#{processor.name}</strong>
         <span className="text-muted-foreground text-xs text-right flex-shrink-0">
-          {new Date(frame.timestamp).toISOString()}
+          {time}
         </span>
       </div>
     </div>
