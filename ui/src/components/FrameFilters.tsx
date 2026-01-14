@@ -54,6 +54,18 @@ export function FrameFilters({
     return availableTypes.filter((t) => t.toLowerCase().includes(q));
   }, [availableTypes, typeSearch]);
 
+  const allFilteredSelected = useMemo(() => {
+    return (
+      filteredTypes.length > 0 &&
+      filteredTypes.every((type) => selectedTypes.has(type))
+    );
+  }, [filteredTypes, selectedTypes]);
+
+  const hasSelectedTypes = selectedTypes.size > 0;
+  const hasFilteredTypes = filteredTypes.length > 0;
+  const showSelectAll = hasFilteredTypes && !allFilteredSelected;
+  const showClearAll = hasSelectedTypes;
+
   const toggleType = (type: string) => {
     const next = new Set(selectedTypes);
     if (next.has(type)) {
@@ -95,30 +107,36 @@ export function FrameFilters({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)]">
-          <div className="flex gap-2 p-2 border-b border-border">
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex-1"
-              onClick={(e) => {
-                e.preventDefault();
-                selectAll();
-              }}
-            >
-              Select All
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex-1"
-              onClick={(e) => {
-                e.preventDefault();
-                clearAll();
-              }}
-            >
-              Clear All
-            </Button>
-          </div>
+          {(showSelectAll || showClearAll) && (
+            <div className="flex gap-2 p-2 border-b border-border">
+              {showSelectAll && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={showClearAll ? "flex-1" : "w-full"}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    selectAll();
+                  }}
+                >
+                  Select All
+                </Button>
+              )}
+              {showClearAll && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={showSelectAll ? "flex-1" : "w-full"}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    clearAll();
+                  }}
+                >
+                  Clear
+                </Button>
+              )}
+            </div>
+          )}
           <div className="p-2 border-b border-border">
             <Input
               placeholder="Search frames..."
