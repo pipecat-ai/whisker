@@ -8,7 +8,7 @@ import React, { useEffect } from "react";
 import { FrameMessage, Processor } from "../types";
 import { useWhisker } from "../hooks.useWhisker";
 import { cn } from "@/lib/utils";
-import { ArrowUp, ArrowDown, Settings, Rocket } from "lucide-react";
+import { ArrowUp, ArrowDown, Cpu, Rocket } from "lucide-react";
 
 type FramePathItemProps = {
   idx: number;
@@ -19,39 +19,42 @@ type FramePathItemProps = {
   onKeyDown?: (e: React.KeyboardEvent<HTMLDivElement>) => void;
 };
 
-export const FramePathItem = React.forwardRef<HTMLDivElement, FramePathItemProps>(
-  ({ idx, frame, processor, isSelected, onClick, onKeyDown }, ref) => {
-    useEffect(() => {
-      if (
-        isSelected &&
-        ref &&
-        typeof ref === "object" &&
-        "current" in ref &&
-        ref.current
-      ) {
-        ref.current.scrollIntoView({ block: "nearest" });
-      }
-    }, [isSelected, ref]);
+export const FramePathItem = React.forwardRef<
+  HTMLDivElement,
+  FramePathItemProps
+>(({ idx, frame, processor, isSelected, onClick, onKeyDown }, ref) => {
+  useEffect(() => {
+    if (
+      isSelected &&
+      ref &&
+      typeof ref === "object" &&
+      "current" in ref &&
+      ref.current
+    ) {
+      ref.current.scrollIntoView({ block: "nearest" });
+    }
+  }, [isSelected, ref]);
 
-    const { frameBackground } = useWhisker();
+  const { frameBackground } = useWhisker();
 
-    return (
-      <div
-        ref={ref}
-        data-key={`path-${frame.id}-${idx}`}
-        className={cn(
-          "px-2 py-1.5 border rounded-lg bg-background hover:outline hover:outline-2 hover:outline-primary",
-          "flex flex-col",
-          {
-            "border-2 border-foreground": isSelected,
-          }
-        )}
-        tabIndex={0} // makes it keyboard focusable
-        style={{ background: frameBackground(frame) }}
-        onClick={onClick}
-        onKeyDown={onKeyDown}
-      >
-        <div className="flex items-center gap-1.5">
+  return (
+    <div
+      ref={ref}
+      data-key={`path-${frame.id}-${idx}`}
+      className={cn(
+        "px-2 py-1.5 border rounded-lg bg-background hover:outline hover:outline-2 hover:outline-primary",
+        "flex flex-col",
+        {
+          "border-2 border-foreground": isSelected,
+        }
+      )}
+      tabIndex={0} // makes it keyboard focusable
+      style={{ background: frameBackground(frame) }}
+      onClick={onClick}
+      onKeyDown={onKeyDown}
+    >
+      <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 w-28 flex-shrink-0">
           {frame.direction === "upstream" ? (
             <ArrowUp className="h-4 w-4" />
           ) : (
@@ -61,7 +64,7 @@ export const FramePathItem = React.forwardRef<HTMLDivElement, FramePathItemProps
             <b>
               {frame.event === "process" ? (
                 <span className="uppercase">
-                  Process <Settings className="h-3 w-3 inline" />
+                  Process <Cpu className="h-3 w-3 inline" />
                 </span>
               ) : (
                 <span className="uppercase">
@@ -70,14 +73,14 @@ export const FramePathItem = React.forwardRef<HTMLDivElement, FramePathItemProps
               )}
             </b>
           </span>
-          <b>#{processor.name}</b>
-          <span className="text-muted-foreground text-xs">
-            • {new Date(frame.timestamp).toISOString()}
-          </span>
         </div>
+        <b className="flex-1 min-w-0">#{processor.name}</b>
+        <span className="text-muted-foreground text-xs text-right flex-shrink-0">
+          {new Date(frame.timestamp).toISOString()}
+        </span>
       </div>
-    );
-  }
-);
+    </div>
+  );
+});
 
 FramePathItem.displayName = "FramePathItem";

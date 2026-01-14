@@ -11,10 +11,10 @@ import { cn } from "@/lib/utils";
 import {
   ArrowUp,
   ArrowDown,
-  Settings,
-  Rocket,
   ChevronDown,
   ChevronRight,
+  Cpu,
+  Rocket,
 } from "lucide-react";
 
 type FrameItemProps = {
@@ -24,12 +24,7 @@ type FrameItemProps = {
   onClick?: () => void;
 };
 
-export function FrameItem({
-  idx,
-  frame,
-  isSelected,
-  onClick,
-}: FrameItemProps) {
+export function FrameItem({ idx, frame, isSelected, onClick }: FrameItemProps) {
   const ref = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -53,30 +48,35 @@ export function FrameItem({
       )}
       style={{ background: frameBackground(frame) }}
     >
-      <div className="flex items-center gap-1.5 cursor-pointer" onClick={onClick}>
-        {frame.direction === "upstream" ? (
-          <ArrowUp className="h-4 w-4" />
-        ) : (
-          <ArrowDown className="h-4 w-4" />
-        )}
-        <span>
-          <b>
-            {frame.event === "process" ? (
-              <span className="uppercase">
-                Process <Settings className="h-3 w-3 inline" />
-              </span>
-            ) : (
-              <span className="uppercase">
-                Push <Rocket className="h-3 w-3 inline" />
-              </span>
-            )}
-          </b>
+      <div
+        className="flex items-center gap-1.5 cursor-pointer"
+        onClick={onClick}
+      >
+        <div className="flex items-center gap-1.5 w-28 flex-shrink-0">
+          {frame.direction === "upstream" ? (
+            <ArrowUp className="h-4 w-4" />
+          ) : (
+            <ArrowDown className="h-4 w-4" />
+          )}
+          <span>
+            <b>
+              {frame.event === "process" ? (
+                <span className="uppercase">
+                  Process <Cpu className="h-3 w-3 inline" />
+                </span>
+              ) : (
+                <span className="uppercase">
+                  Push <Rocket className="h-3 w-3 inline" />
+                </span>
+              )}
+            </b>
+          </span>
+        </div>
+        <b className="flex-1 min-w-0">#{frame.name}</b>
+        <span className="text-muted-foreground text-xs text-right flex-shrink-0">
+          {new Date(frame.timestamp).toISOString()}
         </span>
-        <b>#{frame.name}</b>
-        <span className="text-muted-foreground text-xs">
-          • {new Date(frame.timestamp).toISOString()}
-        </span>
-        <span className="ml-auto transition-transform duration-200 ease-in-out">
+        <span className="transition-transform duration-200 ease-in-out flex-shrink-0">
           {isSelected ? (
             <ChevronDown className="h-4 w-4" />
           ) : (
