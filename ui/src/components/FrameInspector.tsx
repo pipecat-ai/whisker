@@ -4,9 +4,9 @@
 // SPDX-License-Identifier: BSD 2-Clause License
 //
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { useStore } from "../state.store";
-import { ScrollArea } from "./ui/scroll-area";
 import { FrameItem } from "./FrameItem";
 import { FrameFilters } from "./FrameFilters";
 
@@ -66,6 +66,25 @@ export function FrameInspector() {
     showDownstream,
   ]);
 
+  const parentRef = useRef<HTMLDivElement>(null);
+
+  const virtualizer = useVirtualizer({
+    count: sortedFrames.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: (index) => {
+      const frame = sortedFrames[index];
+      const isSelected = selectedFrame?.id === frame?.id;
+      // Return larger estimate for selected/expanded items
+      return isSelected ? 200 : 60;
+    },
+    overscan: 5,
+    measureElement: (el) => {
+      if (!el) return 60;
+      const rect = el.getBoundingClientRect();
+      return rect.height;
+    },
+  });
+
   return (
     <div className="flex flex-col gap-2 h-full min-h-0">
       <FrameFilters
@@ -85,30 +104,56 @@ export function FrameInspector() {
         Showing {sortedFrames.length} frames out of {allFrames.length}
       </span>
       <div className="border border-dashed rounded-lg p-1 overflow-hidden flex flex-col flex-1 min-h-0 my-1">
-        <ScrollArea className="flex-1 min-h-0">
-          <div className="grid gap-1.5 font-mono text-xs content-start">
-            {sortedFrames.length === 0 && (
-              <div className="text-muted-foreground text-xs">
-                Select a processor.
-              </div>
-            )}
-            {sortedFrames.map((f, idx) => {
-              const isSelected = selectedFrame?.id === f.id;
-              return (
-                <FrameItem
-                  key={`frame-${f.id}-${idx}`}
-                  idx={idx}
-                  frame={f}
-                  isSelected={isSelected}
-                  onClick={() => {
-                    setSelectedFrame(isSelected ? undefined : f);
-                    setSelectedFramePath(isSelected ? undefined : f);
-                  }}
-                />
-              );
-            })}
-          </div>
-        </ScrollArea>
+        <div
+          ref={parentRef}
+          className="flex-1 min-h-0 overflow-auto font-mono text-xs"
+          style={{ contain: "strict" }}
+        >
+          {sortedFrames.length === 0 ? (
+            <div className="text-muted-foreground text-xs p-2">
+              Select a processor.
+            </div>
+          ) : (
+            <div
+              style={{
+                height: `${virtualizer.getTotalSize()}px`,
+                width: "100%",
+                position: "relative",
+              }}
+            >
+              {virtualizer.getVirtualItems().map((virtualItem) => {
+                const f = sortedFrames[virtualItem.index];
+                const isSelected = selectedFrame?.id === f.id;
+                return (
+                  <div
+                    key={`frame-${f.id}-${virtualItem.index}`}
+                    ref={virtualizer.measureElement}
+                    data-index={virtualItem.index}
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "100%",
+                      paddingBottom: "6px", // Gap between items
+                      transform: `translateY(${virtualItem.start}px)`,
+                    }}
+                  >
+                    <FrameItem
+                      idx={virtualItem.index}
+                      frame={f}
+                      isSelected={isSelected}
+                      onClick={() => {
+                        const wasSelected = isSelected;
+                        setSelectedFrame(wasSelected ? undefined : f);
+                        setSelectedFramePath(wasSelected ? undefined : f);
+                      }}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

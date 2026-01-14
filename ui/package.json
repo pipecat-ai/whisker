@@ -19,6 +19,7 @@
     "@radix-ui/react-separator": "^1.1.8",
     "@radix-ui/react-slot": "^1.2.4",
     "@radix-ui/react-tooltip": "^1.2.8",
+    "@tanstack/react-virtual": "^3.13.18",
     "@vitejs/plugin-react": "^5.1.2",
     "class-variance-authority": "^0.7.1",
     "classnames": "^2.5.1",

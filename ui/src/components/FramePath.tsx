@@ -5,8 +5,8 @@
 //
 
 import { useEffect, useMemo, useRef } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { useStore } from "../state.store";
-import { ScrollArea } from "./ui/scroll-area";
 import { FramePathItem } from "./FramePathItem";
 
 export function FramePath() {
@@ -51,68 +51,112 @@ export function FramePath() {
     showProcess,
   ]);
 
-  const refs = useRef<(HTMLDivElement | null)[]>([]);
+  const parentRef = useRef<HTMLDivElement>(null);
+  const itemRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+
+  const virtualizer = useVirtualizer({
+    count: frameTimeline.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 60,
+    overscan: 5,
+    measureElement: (el) => {
+      return el?.getBoundingClientRect().height ?? 60;
+    },
+  });
 
   useEffect(() => {
     if (selectedFramePath) {
       const idx = frameTimeline.findIndex(
-        ({ processor, frame }) => frame.id === selectedFramePath.id
+        ({ frame }) => frame.id === selectedFramePath.id
       );
-      if (idx >= 0 && refs.current[idx]) {
-        refs.current[idx]!.focus();
+      if (idx >= 0) {
+        virtualizer.scrollToIndex(idx, { align: "center", behavior: "smooth" });
+        const item = itemRefs.current.get(idx);
+        if (item) {
+          item.focus();
+        }
       }
     }
-  }, [selectedFramePath, frameTimeline]);
+  }, [selectedFramePath, frameTimeline, virtualizer]);
 
   return (
     <div className="flex flex-col flex-1 min-h-0 h-full">
       <div className="border border-dashed rounded-lg p-1 overflow-hidden flex flex-col flex-1 min-h-0 my-1">
-        <ScrollArea className="flex-1 min-h-0">
-          <div className="grid gap-1.5 font-mono text-xs content-start">
-            {frameTimeline.length === 0 && (
-              <div className="text-muted-foreground text-xs">
-                Select a frame.
-              </div>
-            )}
-            {frameTimeline.map(({ processor, frame }, idx) => {
-              const isSelected = selectedFrame?.id === frame.id;
-              return (
-                <FramePathItem
-                  key={`path-${frame.id}-${idx}`}
-                  idx={idx}
-                  ref={(el) => {
-                    refs.current[idx] = el;
-                  }}
-                  frame={frame}
-                  processor={processor}
-                  isSelected={isSelected}
-                  onClick={() => {
-                    setSelectedFramePath(frame);
-                    setSelectedFrame(frame);
-                    setSelectedProcessor(processor.id);
-                  }}
-                  onKeyDown={(e) => {
-                    if (
-                      e.key === "ArrowDown" &&
-                      idx < frameTimeline.length - 1
-                    ) {
-                      const next = frameTimeline[idx + 1];
-                      setSelectedFramePath(next.frame);
-                      setSelectedFrame(next.frame);
-                      setSelectedProcessor(next.processor.id);
-                    }
-                    if (e.key === "ArrowUp" && idx > 0) {
-                      const prev = frameTimeline[idx - 1];
-                      setSelectedFramePath(prev.frame);
-                      setSelectedFrame(prev.frame);
-                      setSelectedProcessor(prev.processor.id);
-                    }
-                  }}
-                />
-              );
-            })}
-          </div>
-        </ScrollArea>
+        <div
+          ref={parentRef}
+          className="flex-1 min-h-0 overflow-auto font-mono text-xs"
+          style={{ contain: "strict" }}
+        >
+          {frameTimeline.length === 0 ? (
+            <div className="text-muted-foreground text-xs p-2">
+              Select a frame.
+            </div>
+          ) : (
+            <div
+              style={{
+                height: `${virtualizer.getTotalSize()}px`,
+                width: "100%",
+                position: "relative",
+              }}
+            >
+              {virtualizer.getVirtualItems().map((virtualItem) => {
+                const { processor, frame } = frameTimeline[virtualItem.index];
+                const isSelected = selectedFrame?.id === frame.id;
+                return (
+                  <div
+                    key={`path-${frame.id}-${virtualItem.index}`}
+                    ref={(el) => {
+                      if (el) {
+                        itemRefs.current.set(virtualItem.index, el);
+                        virtualizer.measureElement(el);
+                      } else {
+                        itemRefs.current.delete(virtualItem.index);
+                      }
+                    }}
+                    data-index={virtualItem.index}
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "100%",
+                      paddingBottom: "6px", // Gap between items
+                      transform: `translateY(${virtualItem.start}px)`,
+                    }}
+                  >
+                    <FramePathItem
+                      idx={virtualItem.index}
+                      frame={frame}
+                      processor={processor}
+                      isSelected={isSelected}
+                      onClick={() => {
+                        setSelectedFramePath(frame);
+                        setSelectedFrame(frame);
+                        setSelectedProcessor(processor.id);
+                      }}
+                      onKeyDown={(e) => {
+                        if (
+                          e.key === "ArrowDown" &&
+                          virtualItem.index < frameTimeline.length - 1
+                        ) {
+                          const next = frameTimeline[virtualItem.index + 1];
+                          setSelectedFramePath(next.frame);
+                          setSelectedFrame(next.frame);
+                          setSelectedProcessor(next.processor.id);
+                        }
+                        if (e.key === "ArrowUp" && virtualItem.index > 0) {
+                          const prev = frameTimeline[virtualItem.index - 1];
+                          setSelectedFramePath(prev.frame);
+                          setSelectedFrame(prev.frame);
+                          setSelectedProcessor(prev.processor.id);
+                        }
+                      }}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
