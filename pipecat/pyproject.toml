@@ -20,9 +20,9 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence"
 ]
 dependencies = [
-    "aiofiles>=24.1.0",
-    "loguru~=0.7.3",
-    "msgpack>=1.1.1",
+    "aiofiles>=24.1.0,<25",
+    "loguru>=0.7.3,<1",
+    "msgpack>=1.1.1,<2",
     "pipecat-ai>=0.0.81",
     "websockets>=13.1,<15.0",
 ]

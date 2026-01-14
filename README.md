@@ -6,7 +6,7 @@
 
 # ᓚᘏᗢ Whisker: A Pipecat Debugger
 
-**Whisker** is a live graphical debugger for the [Pipecat](https://github.com/pipecat-ai/pipecat) voice and multimodal conversational AI framework.
+**Whisker** is a low-level debugger for the [Pipecat](https://github.com/pipecat-ai/pipecat) voice and multimodal conversational AI framework.
 
 It lets you **visualize pipelines and debug frames in real time** — so you can see exactly what your bot is thinking and doing.
 
@@ -40,17 +40,31 @@ uv pip install pipecat-ai-whisker
 
 ### Add Whisker to your Pipecat pipeline
 
+You can add Whisker to your pipeline by just adding an observer to the pipeline task.
+
 ```python
 from pipecat_whisker import WhiskerObserver
 
 pipeline = Pipeline(...)
 
-whisker = WhiskerObserver(pipeline)
+task = PipelineTask(...)
 
-task = PipelineTask(..., observers=[whisker])
+task.add_observer(WhiskerObserver(task.pipeline))
 ```
 
-This starts the Whisker server that the graphical UI will connect to. By default, the Whisker server runs at:
+Starting in Pipecat 0.0.99, it is also possible to add Whisker in an unobtrusive way by using an external pipeline task setup file and adding that file to the `PIPELINE_SETUP_FILES` environment variable.
+
+```python
+from pipecat_whisker import WhiskerObserver
+
+from pipecat.pipeline.task import PipelineTask
+
+
+async def setup_pipeline_task(task: PipelineTask):
+    task.add_observer(WhiskerObserver(task.pipeline))
+```
+
+In both cases, this starts the Whisker server that the graphical UI will connect to. By default, the Whisker server runs at:
 
 ```
 ws://localhost:9090
