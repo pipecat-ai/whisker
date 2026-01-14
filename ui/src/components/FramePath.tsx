@@ -4,12 +4,10 @@
 // SPDX-License-Identifier: BSD 2-Clause License
 //
 
-import React from "react";
 import { useEffect, useMemo, useRef } from "react";
 import { useStore } from "../state.store";
-import { FrameMessage, Processor } from "../types";
-import { useWhisker } from "../hooks.useWhisker";
-import cls from "classnames";
+import { ScrollArea } from "./ui/scroll-area";
+import { FramePathItem } from "./FramePathItem";
 
 export function FramePath() {
   const frames = useStore((s) => s.frames);
@@ -67,98 +65,55 @@ export function FramePath() {
   }, [selectedFramePath, frameTimeline]);
 
   return (
-    <div className="pane-container">
-      <div className="pane">
-        <div className="list">
-          {frameTimeline.length === 0 && (
-            <div className="footer-note">Select a frame.</div>
-          )}
-          {frameTimeline.map(({ processor, frame }, idx) => {
-            const isSelected = selectedFrame.id === frame.id;
-            return (
-              <FramePathItem
-                idx={idx}
-                ref={(el) => {
-                  refs.current[idx] = el;
-                }}
-                frame={frame}
-                processor={processor}
-                isSelected={isSelected}
-                onClick={() => {
-                  setSelectedFramePath(frame);
-                  setSelectedFrame(frame);
-                  setSelectedProcessor(processor.id);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "ArrowDown" && idx < frameTimeline.length - 1) {
-                    const next = frameTimeline[idx + 1];
-                    setSelectedFramePath(next.frame);
-                    setSelectedFrame(next.frame);
-                    setSelectedProcessor(next.processor.id);
-                  }
-                  if (e.key === "ArrowUp" && idx > 0) {
-                    const prev = frameTimeline[idx - 1];
-                    setSelectedFramePath(prev.frame);
-                    setSelectedFrame(prev.frame);
-                    setSelectedProcessor(prev.processor.id);
-                  }
-                }}
-              />
-            );
-          })}
-        </div>
+    <div className="flex flex-col flex-1 min-h-0 h-full">
+      <div className="border border-dashed rounded-lg p-1 overflow-hidden flex flex-col flex-1 min-h-0 my-1">
+        <ScrollArea className="flex-1 min-h-0">
+          <div className="grid gap-1.5 font-mono text-xs content-start">
+            {frameTimeline.length === 0 && (
+              <div className="text-muted-foreground text-xs">
+                Select a frame.
+              </div>
+            )}
+            {frameTimeline.map(({ processor, frame }, idx) => {
+              const isSelected = selectedFrame?.id === frame.id;
+              return (
+                <FramePathItem
+                  key={`path-${frame.id}-${idx}`}
+                  idx={idx}
+                  ref={(el) => {
+                    refs.current[idx] = el;
+                  }}
+                  frame={frame}
+                  processor={processor}
+                  isSelected={isSelected}
+                  onClick={() => {
+                    setSelectedFramePath(frame);
+                    setSelectedFrame(frame);
+                    setSelectedProcessor(processor.id);
+                  }}
+                  onKeyDown={(e) => {
+                    if (
+                      e.key === "ArrowDown" &&
+                      idx < frameTimeline.length - 1
+                    ) {
+                      const next = frameTimeline[idx + 1];
+                      setSelectedFramePath(next.frame);
+                      setSelectedFrame(next.frame);
+                      setSelectedProcessor(next.processor.id);
+                    }
+                    if (e.key === "ArrowUp" && idx > 0) {
+                      const prev = frameTimeline[idx - 1];
+                      setSelectedFramePath(prev.frame);
+                      setSelectedFrame(prev.frame);
+                      setSelectedProcessor(prev.processor.id);
+                    }
+                  }}
+                />
+              );
+            })}
+          </div>
+        </ScrollArea>
       </div>
     </div>
   );
 }
-
-type FramePathItemProps = {
-  idx: number;
-  frame: FrameMessage;
-  processor: Processor;
-  isSelected: boolean;
-  onClick: () => void;
-  onKeyDown?: (e: React.KeyboardEvent<HTMLDivElement>) => void;
-};
-
-const FramePathItem = React.forwardRef<HTMLDivElement, FramePathItemProps>(
-  ({ idx, frame, processor, isSelected, onClick, onKeyDown }, ref) => {
-    useEffect(() => {
-      if (
-        isSelected &&
-        ref &&
-        typeof ref === "object" &&
-        "current" in ref &&
-        ref.current
-      ) {
-        ref.current.scrollIntoView({ block: "nearest" });
-      }
-    }, [isSelected, ref]);
-
-    const { frameBackground } = useWhisker();
-
-    return (
-      <div
-        ref={ref}
-        key={`path-${frame.id}-${idx}`}
-        data-key={`path-${frame.id}-${idx}`}
-        className={cls("list-item", "frame-item", { selected: isSelected })}
-        tabIndex={0} // makes it keyboard focusable
-        style={{ background: frameBackground(frame) }}
-        onClick={onClick}
-        onKeyDown={onKeyDown}
-      >
-        <div className="frame-header">
-          <span>{frame.direction === "upstream" ? "⬆️️" : "⬇️️"}</span>
-          <span>
-            <b>{frame.event === "process" ? "PROCESS ⚙️️" : "PUSH 🚀"}</b>
-          </span>
-          <b>#{processor.name}</b>
-          <span className="footer-note">
-            • {new Date(frame.timestamp).toISOString()}
-          </span>
-        </div>
-      </div>
-    );
-  }
-);
