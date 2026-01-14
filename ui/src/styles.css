@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /*!
  *
  *  Copyright (c) 2025, Daily
@@ -6,29 +10,82 @@
  *
  */
 
-:root {
-  --bg: #f7f7fb;
-  --panel: #ffffff;
-  --text: #121212;
-  --muted: #666;
-  --primary: #4f46e5;
-  --border: #e5e7eb;
-  --accent: #10b981;
-  --danger: #ef4444;
+@layer base {
+  :root {
+    /* shadcn/ui theme variables (HSL format) */
+    --background: 240 10% 98%;
+    --foreground: 222 47% 7%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 7%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 7%;
+    /* Primary: Modern teal-cyan for debugger tool - professional and tech-forward */
+    --primary: 195 70% 42%;
+    --primary-foreground: 0 0% 100%;
+    /* Secondary: Soft blue-gray for subtle accents */
+    --secondary: 215 20% 72%;
+    --secondary-foreground: 222 47% 7%;
+    --muted: 0 0% 40%;
+    --muted-foreground: 0 0% 40%;
+    /* Accent: Slightly brighter teal for highlights */
+    --accent: 195 65% 48%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 65% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 195 70% 42%;
+    --radius: 0.5rem;
+  }
+
+  [data-theme="dark"] {
+    /* shadcn/ui theme variables (HSL format) */
+    --background: 222 47% 4%;
+    --foreground: 213 31% 91%;
+    --card: 222 47% 7%;
+    --card-foreground: 213 31% 91%;
+    --popover: 222 47% 7%;
+    --popover-foreground: 213 31% 91%;
+    /* Primary: Brighter teal-cyan for dark mode visibility */
+    --primary: 195 75% 52%;
+    --primary-foreground: 222 47% 4%;
+    /* Secondary: Muted blue-gray for dark mode */
+    --secondary: 215 25% 18%;
+    --secondary-foreground: 213 31% 91%;
+    --muted: 213 20% 69%;
+    --muted-foreground: 213 20% 69%;
+    /* Accent: Vibrant teal for dark mode highlights */
+    --accent: 195 70% 57%;
+    --accent-foreground: 222 47% 4%;
+    --destructive: 0 60% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 195 75% 52%;
+  }
+
+  * {
+    @apply border-border;
+    box-sizing: border-box;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    margin: 0;
+    font-family:
+      ui-sans-serif,
+      system-ui,
+      -apple-system,
+      Segoe UI,
+      Roboto,
+      Helvetica,
+      Arial,
+      Noto Sans,
+      "Apple Color Emoji",
+      "Segoe UI Emoji";
+  }
 }
-[data-theme="dark"] {
-  --bg: #0b0d10;
-  --panel: #12151b;
-  --text: #edf2f7;
-  --muted: #a2a9b0;
-  --primary: #8b7dff;
-  --border: #1f2430;
-  --accent: #22d3ee;
-  --danger: #f87171;
-}
-* {
-  box-sizing: border-box;
-}
+
 html,
 body,
 #root {
