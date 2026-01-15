@@ -88,7 +88,11 @@ export function FrameFilters({
   return (
     <div className="flex flex-col gap-2 flex-shrink-0">
       <div className="flex items-center gap-2 flex-wrap">
-        <DropdownMenu open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+        <DropdownMenu
+          open={isFilterOpen}
+          onOpenChange={setIsFilterOpen}
+          modal={false}
+        >
           <DropdownMenuTrigger asChild>
             <Button
               variant="outline"
@@ -144,6 +148,7 @@ export function FrameFilters({
                 placeholder="Search frames..."
                 value={typeSearch}
                 onChange={(e) => setTypeSearch(e.target.value)}
+                onKeyDown={(e) => e.stopPropagation()}
                 className="h-8"
               />
             </div>
