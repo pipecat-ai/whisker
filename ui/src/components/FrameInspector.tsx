@@ -4,16 +4,14 @@
 // SPDX-License-Identifier: BSD 2-Clause License
 //
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { useStore } from "../state.store";
-import { FrameMessage } from "../types";
-import { useWhisker } from "../hooks.useWhisker";
-import cls from "classnames";
+import { FrameItem } from "./FrameItem";
+import { FrameFilters } from "./FrameFilters";
 
 export function FrameInspector() {
   const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set());
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [typeSearch, setTypeSearch] = useState("");
   const [showUpstream, setShowUpstream] = useState(true);
   const [showDownstream, setShowDownstream] = useState(true);
   const frames = useStore((s) => s.frames);
@@ -40,12 +38,6 @@ export function FrameInspector() {
     );
     return Array.from(types).sort();
   }, [frames]);
-
-  const filteredTypes = useMemo(() => {
-    if (!typeSearch) return availableTypes;
-    const q = typeSearch.toLowerCase();
-    return availableTypes.filter((t) => t.toLowerCase().includes(q));
-  }, [availableTypes, typeSearch]);
 
   const sortedFrames = useMemo(() => {
     if (!selected) return [];
@@ -74,186 +66,95 @@ export function FrameInspector() {
     showDownstream,
   ]);
 
-  const toggleType = (type: string) => {
-    setSelectedTypes((prev) => {
-      const next = new Set(prev);
-      if (next.has(type)) {
-        next.delete(type);
-      } else {
-        next.add(type);
-      }
-      return next;
-    });
-  };
+  const parentRef = useRef<HTMLDivElement>(null);
 
-  const selectAll = () => {
-    setSelectedTypes(new Set(filteredTypes));
-  };
-
-  const clearAll = () => {
-    setSelectedTypes(new Set());
-  };
+  const virtualizer = useVirtualizer({
+    count: sortedFrames.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: (index) => {
+      const frame = sortedFrames[index];
+      const isSelected = selectedFrame?.id === frame?.id;
+      // Return larger estimate for selected/expanded items
+      return isSelected ? 200 : 60;
+    },
+    overscan: 5,
+    measureElement: (el) => {
+      if (!el) return 60;
+      const rect = el.getBoundingClientRect();
+      return rect.height;
+    },
+  });
 
   return (
-    <div className="split">
-      <div className="filter-row">
-        <div className="filter-dropdown">
-          <button
-            className="filter-button"
-            onClick={() => setIsFilterOpen(!isFilterOpen)}
-          >
-            <span>
-              {selectedTypes.size === 0
-                ? "All frames"
-                : `${selectedTypes.size} frame type${selectedTypes.size > 1 ? "s" : ""} selected`}
-            </span>
-            <span>{isFilterOpen ? "▲" : "▼"}</span>
-          </button>
-          {isFilterOpen && (
-            <div className="filter-menu">
-              <div className="filter-menu-header">
-                <button className="btn-sm" onClick={selectAll}>
-                  Select All
-                </button>
-                <button className="btn-sm" onClick={clearAll}>
-                  Clear All
-                </button>
-              </div>
-              <div className="filter-menu-search">
-                <input
-                  type="text"
-                  className="filter-input"
-                  placeholder="Search frames..."
-                  value={typeSearch}
-                  onChange={(e) => setTypeSearch(e.target.value)}
-                />
-              </div>
-              {filteredTypes.length === 0 ? (
-                <div className="filter-menu-empty">No frames available</div>
-              ) : (
-                filteredTypes.map((type) => (
-                  <label key={type} className="filter-menu-item">
-                    <input
-                      type="checkbox"
-                      checked={selectedTypes.has(type)}
-                      onChange={() => toggleType(type)}
+    <div className="flex flex-col gap-2 h-full min-h-0">
+      <FrameFilters
+        availableTypes={availableTypes}
+        selectedTypes={selectedTypes}
+        onTypesChange={setSelectedTypes}
+        showPush={showPush}
+        showProcess={showProcess}
+        showUpstream={showUpstream}
+        showDownstream={showDownstream}
+        onShowPushChange={setShowPush}
+        onShowProcessChange={setShowProcess}
+        onShowUpstreamChange={setShowUpstream}
+        onShowDownstreamChange={setShowDownstream}
+      />
+      <span className="text-sm text-foreground/70 my-1 flex-shrink-0">
+        Showing {sortedFrames.length} frames out of {allFrames.length}
+      </span>
+      <div className="border border-dashed rounded-lg p-1 overflow-hidden flex flex-col flex-1 min-h-0 my-1">
+        <div
+          ref={parentRef}
+          className="flex-1 min-h-0 overflow-auto font-mono text-xs"
+          style={{ contain: "strict" }}
+        >
+          {sortedFrames.length === 0 ? (
+            <div className="text-muted-foreground text-xs p-2">
+              Select a processor.
+            </div>
+          ) : (
+            <div
+              style={{
+                height: `${virtualizer.getTotalSize()}px`,
+                width: "100%",
+                position: "relative",
+              }}
+            >
+              {virtualizer.getVirtualItems().map((virtualItem) => {
+                const f = sortedFrames[virtualItem.index];
+                const isSelected = selectedFrame?.id === f.id;
+                return (
+                  <div
+                    key={`frame-${f.id}-${virtualItem.index}`}
+                    ref={virtualizer.measureElement}
+                    data-index={virtualItem.index}
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "100%",
+                      paddingBottom: "6px", // Gap between items
+                      transform: `translateY(${virtualItem.start}px)`,
+                    }}
+                  >
+                    <FrameItem
+                      idx={virtualItem.index}
+                      frame={f}
+                      isSelected={isSelected}
+                      onClick={() => {
+                        const wasSelected = isSelected;
+                        setSelectedFrame(wasSelected ? undefined : f);
+                        setSelectedFramePath(wasSelected ? undefined : f);
+                      }}
                     />
-                    <span>{type}</span>
-                  </label>
-                ))
-              )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
-        <div className="checkbox-group">
-          <label className="checkbox-label">
-            <input
-              type="checkbox"
-              checked={showPush}
-              onChange={(e) => setShowPush(e.target.checked)}
-            />
-            PUSH
-          </label>
-          <label className="checkbox-label">
-            <input
-              type="checkbox"
-              checked={showProcess}
-              onChange={(e) => setShowProcess(e.target.checked)}
-            />
-            PROCESS
-          </label>
-        </div>
-        <div className="checkbox-group">
-          <label className="checkbox-label">
-            <input
-              type="checkbox"
-              checked={showUpstream}
-              onChange={(e) => setShowUpstream(e.target.checked)}
-            />
-            UPSTREAM
-          </label>
-          <label className="checkbox-label">
-            <input
-              type="checkbox"
-              checked={showDownstream}
-              onChange={(e) => setShowDownstream(e.target.checked)}
-            />
-            DOWNSTREAM
-          </label>
-        </div>
       </div>
-      <span className="frame-count">
-        Showing {sortedFrames.length} frames out of {allFrames.length}
-      </span>
-      <div className="pane">
-        <div className="list">
-          {sortedFrames.length === 0 && (
-            <div className="footer-note">Select a processor.</div>
-          )}
-          {sortedFrames.map((f, idx) => {
-            const isSelected = selectedFrame?.id === f.id;
-            return (
-              <FrameItem
-                idx={idx}
-                frame={f}
-                isSelected={isSelected}
-                onClick={() => {
-                  setSelectedFrame(isSelected ? undefined : f);
-                  setSelectedFramePath(isSelected ? undefined : f);
-                }}
-              />
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function FrameItem({
-  idx,
-  frame,
-  isSelected,
-  onClick,
-}: {
-  idx: number;
-  frame: FrameMessage;
-  isSelected: boolean;
-  onClick?: () => void;
-}) {
-  const ref = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (isSelected && ref.current) {
-      ref.current.scrollIntoView({ block: "nearest" });
-    }
-  }, [isSelected]);
-
-  const { frameBackground } = useWhisker();
-
-  return (
-    <div
-      key={`frame-${frame.id}-${idx}`}
-      ref={ref}
-      className={cls("list-item", "frame-item", { selected: isSelected })}
-      style={{ background: frameBackground(frame) }}
-    >
-      <div className="frame-header" onClick={onClick}>
-        <span>{frame.direction === "upstream" ? "⬆️️" : "⬇️️"}</span>
-        <span>
-          <b>{frame.event === "process" ? "PROCESS ⚙️️" : "PUSH 🚀"}</b>
-        </span>
-        <b>#{frame.name}</b>
-        <span className="footer-note">
-          • {new Date(frame.timestamp).toISOString()}
-        </span>
-        <span className="ml-auto">{isSelected ? "▼" : "▶"}</span>
-      </div>
-      {isSelected && (
-        <div className="footer-note frame-details">
-          {JSON.stringify(frame.payload, null, 2)}
-        </div>
-      )}
     </div>
   );
 }

@@ -40,6 +40,7 @@ const layoutOptions: DagreLayoutOptions = {
 cytoscape.use(dagre);
 
 export function Pipeline() {
+  const theme = useStore((s) => s.theme);
   const processors = useStore((s) => s.processors);
   const connections = useStore((s) => s.connections);
   const selectedProcessor = useStore((s) => s.selectedProcessor);
@@ -110,7 +111,8 @@ export function Pipeline() {
         "text-valign": "center",
         "text-halign": "center",
         "font-size": 12,
-        "background-color": "#718096",
+        "background-color": theme === "dark" ? "#2A303C" : "#718096",
+        "border-color": "#4A5568",
         width: 250,
         height: 75,
         "border-width": 1,
