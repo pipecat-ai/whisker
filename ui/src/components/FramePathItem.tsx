@@ -69,11 +69,13 @@ export const FramePathItem = React.forwardRef<
           <strong>
             {frame.event === "process" ? (
               <span className="uppercase">
-                <span className="sr-only md:not-sr-only">Process</span> <Cpu className="h-3 w-3 inline" />
+                <span className="sr-only md:not-sr-only">Process</span>{" "}
+                <Cpu className="h-3 w-3 inline" />
               </span>
             ) : (
               <span className="uppercase">
-                <span className="sr-only md:not-sr-only">Push</span> <Rocket className="h-3 w-3 inline" />
+                <span className="sr-only md:not-sr-only">Push</span>{" "}
+                <Rocket className="h-3 w-3 inline" />
               </span>
             )}
           </strong>
