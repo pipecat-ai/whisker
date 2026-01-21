@@ -111,8 +111,8 @@ export function Pipeline() {
         "text-valign": "center",
         "text-halign": "center",
         "font-size": 12,
-        "background-color": theme === "dark" ? "#2A303C" : "#718096",
-        "border-color": "#4A5568",
+        "background-color": theme === "dark" ? "#3d4451" : "#718096",
+        "border-color": theme === "dark" ? "#5a6270" : "#4A5568",
         width: 250,
         height: 75,
         "border-width": 1,
@@ -123,14 +123,14 @@ export function Pipeline() {
       style: {
         "transition-property": "background-color",
         "transition-duration": 120,
-        "background-color": "#38B2AC", // teal flash
+        "background-color": theme === "dark" ? "#a8a3fc" : "#4f46e5", // indigo flash
       },
     },
     {
       selector: "node:selected",
       style: {
         "border-width": 2,
-        "background-color": "#3182CE",
+        "background-color": theme === "dark" ? "#a8a3fc" : "#4f46e5",
       },
     },
     {

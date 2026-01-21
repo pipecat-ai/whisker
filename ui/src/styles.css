@@ -19,22 +19,22 @@
     --card-foreground: 222 47% 7%;
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 7%;
-    /* Primary: Modern teal-cyan for debugger tool - professional and tech-forward */
-    --primary: 195 70% 42%;
+    /* Primary: Vibrant indigo for light mode - professional and modern */
+    --primary: 243 75% 59%;
     --primary-foreground: 0 0% 100%;
     /* Secondary: Soft blue-gray for subtle accents */
     --secondary: 215 20% 72%;
     --secondary-foreground: 222 47% 7%;
     --muted: 0 0% 40%;
     --muted-foreground: 0 0% 40%;
-    /* Accent: Slightly brighter teal for highlights */
-    --accent: 195 65% 48%;
+    /* Accent: Vibrant indigo for highlights */
+    --accent: 243 75% 59%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 65% 50%;
     --destructive-foreground: 0 0% 100%;
     --border: 220 13% 91%;
     --input: 220 13% 91%;
-    --ring: 195 70% 42%;
+    --ring: 243 75% 59%;
     --radius: 0.5rem;
   }
 
@@ -46,22 +46,22 @@
     --card-foreground: 213 31% 91%;
     --popover: 222 47% 7%;
     --popover-foreground: 213 31% 91%;
-    /* Primary: Brighter teal-cyan for dark mode visibility */
-    --primary: 195 75% 52%;
+    /* Primary: Light indigo for dark mode visibility */
+    --primary: 243 88% 81%;
     --primary-foreground: 222 47% 4%;
     /* Secondary: Muted blue-gray for dark mode */
     --secondary: 215 25% 18%;
     --secondary-foreground: 213 31% 91%;
     --muted: 213 20% 69%;
     --muted-foreground: 213 20% 69%;
-    /* Accent: Vibrant teal for dark mode highlights */
-    --accent: 195 70% 57%;
+    /* Accent: Light indigo for dark mode highlights - matches primary */
+    --accent: 243 88% 81%;
     --accent-foreground: 222 47% 4%;
     --destructive: 0 60% 55%;
     --destructive-foreground: 0 0% 100%;
     --border: 217 33% 17%;
     --input: 217 33% 17%;
-    --ring: 195 75% 52%;
+    --ring: 243 88% 81%;
   }
 
   * {
