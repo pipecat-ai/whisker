@@ -52,7 +52,7 @@ task = PipelineTask(...)
 task.add_observer(WhiskerObserver(task.pipeline))
 ```
 
-Starting in Pipecat 0.0.99, it is also possible to add Whisker in an unobtrusive way by using an external pipeline task setup file and adding that file to the `PIPELINE_SETUP_FILES` environment variable.
+Starting in Pipecat 0.0.99, it is also possible to add Whisker in an unobtrusive way by using an external pipeline task setup file and adding that file to the `PIPECAT_SETUP_FILES` environment variable.
 
 ```python
 from pipecat_whisker import WhiskerObserver
