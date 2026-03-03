@@ -1242,7 +1242,7 @@ requires-dist = [
     { name = "loguru", specifier = ">=0.7.3,<1" },
     { name = "msgpack", specifier = ">=1.1.1,<2" },
     { name = "pipecat-ai", specifier = ">=0.0.81" },
-    { name = "websockets", specifier = ">=13.1,<15.0" },
+    { name = "websockets", specifier = ">=13.1,<16.0" },
 ]
 
 [package.metadata.requires-dev]
