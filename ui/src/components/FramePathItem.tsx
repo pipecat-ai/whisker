@@ -48,7 +48,7 @@ export const FramePathItem = React.forwardRef<
       ref={ref}
       data-key={`path-${frame.id}-${idx}`}
       className={cn(
-        "px-2 py-1.5 border rounded-lg bg-background hover:outline hover:outline-2 hover:outline-primary",
+        "px-2 py-1.5 border rounded-lg bg-background hover:outline hover:outline-2 hover:outline-primary cursor-default select-none",
         "flex flex-col",
         {
           "border-2 border-foreground": isSelected,
