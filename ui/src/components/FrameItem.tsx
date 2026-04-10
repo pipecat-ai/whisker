@@ -4,7 +4,7 @@
 // SPDX-License-Identifier: BSD 2-Clause License
 //
 
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo, useRef } from "react";
 import { format } from "date-fns";
 import { FrameMessage } from "../types";
 import { useWhisker } from "../hooks.useWhisker";
@@ -12,13 +12,12 @@ import { cn } from "@/lib/utils";
 import { ArrowUp, ArrowDown, ChevronRight, Cpu, Rocket } from "lucide-react";
 
 type FrameItemProps = {
-  idx: number;
   frame: FrameMessage;
   isSelected: boolean;
   onClick?: () => void;
 };
 
-export function FrameItem({ idx, frame, isSelected, onClick }: FrameItemProps) {
+export function FrameItem({ frame, isSelected, onClick }: FrameItemProps) {
   const ref = useRef<HTMLDivElement | null>(null);
 
   const { frameBackground } = useWhisker();
@@ -34,7 +33,6 @@ export function FrameItem({ idx, frame, isSelected, onClick }: FrameItemProps) {
       className={cn(
         "px-2 py-1.5 border rounded-lg bg-background hover:outline hover:outline-2 hover:outline-primary",
         "flex flex-col",
-        "transition-all duration-200 ease-in-out",
         {
           "border-2 border-foreground": isSelected,
         }
@@ -77,16 +75,13 @@ export function FrameItem({ idx, frame, isSelected, onClick }: FrameItemProps) {
           <ChevronRight className="h-4 w-4" />
         </span>
       </div>
-      <div
-        className={cn(
-          "text-muted-foreground text-xs whitespace-pre-wrap select-text overflow-hidden transition-all duration-300 ease-in-out",
-          isSelected ? "max-h-[1000px] opacity-100 mt-2" : "max-h-0 opacity-0"
-        )}
-      >
-        <div className="pt-2 whitespace-pre-wrap">
-          {JSON.stringify(frame.payload, null, 2)}
+      {isSelected && (
+        <div className="text-muted-foreground text-xs whitespace-pre-wrap select-text mt-2">
+          <div className="pt-2 whitespace-pre-wrap">
+            {JSON.stringify(frame.payload, null, 2)}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

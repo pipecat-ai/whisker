@@ -139,7 +139,6 @@ export function FrameInspector() {
                     }}
                   >
                     <FrameItem
-                      idx={virtualItem.index}
                       frame={f}
                       isSelected={isSelected}
                       onClick={() => {
