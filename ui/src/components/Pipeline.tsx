@@ -77,27 +77,28 @@ export function Pipeline() {
 
   // Flash processors that get traffic
   const FLASH_DURATION_MS = 150;
-  const lastTimesRef = useRef<Record<string, number>>({});
+  const frameCountsRef = useRef<Record<string, number>>({});
+  const flashingRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     const cy = cyRef.current;
     if (!cy) return;
 
-    const flash = (id: string) => {
-      const el = cy.$(`#${CSS.escape(id)}`);
-      el.removeClass("flash"); // reset if still there
+    Object.entries(frames).forEach(([pid, list]) => {
+      const prev = frameCountsRef.current[pid] || 0;
+      const curr = list?.length || 0;
+      frameCountsRef.current[pid] = curr;
+
+      if (curr <= prev) return;
+      if (flashingRef.current.has(pid)) return;
+
+      const el = cy.$(`#${CSS.escape(pid)}`);
       el.addClass("flash");
-      setTimeout(() => el.removeClass("flash"), FLASH_DURATION_MS);
-    };
-
-    const now = Date.now();
-
-    Object.keys(frames).forEach((pid) => {
-      const last = lastTimesRef.current[pid] || 0;
-      if (now - last > FLASH_DURATION_MS) {
-        flash(pid);
-        lastTimesRef.current[pid] = now;
-      }
+      flashingRef.current.add(pid);
+      setTimeout(() => {
+        el.removeClass("flash");
+        flashingRef.current.delete(pid);
+      }, FLASH_DURATION_MS);
     });
   }, [frames]);
 
@@ -121,8 +122,6 @@ export function Pipeline() {
     {
       selector: "node.flash",
       style: {
-        "transition-property": "background-color",
-        "transition-duration": 120,
         "background-color": theme === "dark" ? "#a8a3fc" : "#4f46e5", // indigo flash
       },
     },
