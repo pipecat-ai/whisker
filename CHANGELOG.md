@@ -5,6 +5,20 @@ All notable changes to **Whisker** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- Fixed a Whisker client issue that caused processor blinking to be delayed
+  and trigger on processors that didn't receive new frames.
+
+- Fixed a Whisker client issue where expanding a frame to see its details
+  used a slow animation instead of showing the payload immediately.
+
+- Fixed a Whisker client issue where the cursor would turn into a text
+  I-beam when hovering over frame path items, making them look like they
+  could be expanded like frames in the frames panel.
+
 ## [0.0.11] - 2026-01-12
 
 ### Added
