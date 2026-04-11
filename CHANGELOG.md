@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Switched from removed `OpenAILLMContext` to universal `LLMContext` for
   Pipecat 1.0 compatibility. Context messages are now serialized using
-  `get_messages(elide_large_values=True)` for compact output.
+  `get_messages(truncate_large_values=True)` for compact output.
 
 - Bumped `pipecat-ai` dependency to `>=1.0.0`.
 
