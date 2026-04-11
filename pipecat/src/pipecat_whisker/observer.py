@@ -74,7 +74,7 @@ def whisker_obj_serializer(obj: Any) -> Any:
     elif isinstance(obj, BaseModel):
         return obj.model_dump(exclude_none=True)
     elif isinstance(obj, LLMContext):
-        return [whisker_obj_serializer(m) for m in obj.get_messages(elide_large_values=True)]
+        return [whisker_obj_serializer(m) for m in obj.get_messages(truncate_large_values=True)]
     elif isinstance(obj, (int, float, bool, str)):
         return obj
     else:
