@@ -9,7 +9,7 @@ description = "A real-time debugger for Pipecat"
 license = "BSD-2-Clause"
 license-files = ["LICENSE"]
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 keywords = ["pipecat", "debug", "ai"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
