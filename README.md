@@ -27,7 +27,7 @@ Think of Whisker as **trace logging with batteries**.
 
 ### Requirements
 
-- Python 3.10+
+- Python 3.11+
 - [Pipecat](https://github.com/pipecat-ai/pipecat) installed
 - Node.js 20+ (for the UI)
 - [ngrok](https://ngrok.com/) (for connecting to the hosted UI)
