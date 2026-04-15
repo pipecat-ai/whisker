@@ -37,7 +37,7 @@ from loguru import logger
 from pipecat.frames.frames import BotSpeakingFrame, Frame, InputAudioRawFrame
 from pipecat.observers.base_observer import BaseObserver, FrameProcessed, FramePushed
 from pipecat.pipeline.base_pipeline import BasePipeline
-from pipecat.processors.aggregators.openai_llm_context import OpenAILLMContext
+from pipecat.processors.aggregators.llm_context import LLMContext
 from pipecat.processors.frame_processor import FrameProcessor
 from pydantic import BaseModel
 from websockets import ConnectionClosedOK, serve
@@ -73,8 +73,8 @@ def whisker_obj_serializer(obj: Any) -> Any:
         return {k: whisker_obj_serializer(v) for k, v in obj.items() if v is not None}
     elif isinstance(obj, BaseModel):
         return obj.model_dump(exclude_none=True)
-    elif isinstance(obj, OpenAILLMContext):
-        return obj.get_messages_for_logging()
+    elif isinstance(obj, LLMContext):
+        return [whisker_obj_serializer(m) for m in obj.get_messages(truncate_large_values=True)]
     elif isinstance(obj, (int, float, bool, str)):
         return obj
     else:
