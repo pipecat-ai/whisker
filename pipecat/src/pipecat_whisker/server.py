@@ -88,6 +88,8 @@ __WHISKER_VERSION__ = version("pipecat-ai-whisker")
 __PYTHON_VERSION__ = sys.version
 
 
+PROTOCOL_VERSION = "1"
+
 MAX_BATCH_SIZE_BYTES = 10000
 
 DEFAULT_EXCLUDE_FRAMES: Tuple[Type[Frame], ...] = (InputAudioRawFrame, BotSpeakingFrame)
@@ -195,7 +197,7 @@ class _ObservedTask:
 
     task_name: str
     pipeline: BasePipeline
-    topology_sent: bool = field(default=False)
+    added_at: float = field(default_factory=time.time)
 
 
 class WhiskerServer(BaseTask):
@@ -256,7 +258,10 @@ class WhiskerServer(BaseTask):
         # Asyncio state — allocated lazily in start().
         self._id = 0
         self._client = None
-        self._batch: List[bytes] = []
+        # Each batch entry is (timestamp_seconds, encoded_message_bytes).
+        # The timestamp drives the merged replay sent to a newly connected
+        # client; for steady-state sends it is unused.
+        self._batch: List[Tuple[float, bytes]] = []
         self._send_queue: Optional[asyncio.Queue] = None
         self._send_task_handle: Optional[asyncio.Task] = None
         self._server_task_handle: Optional[asyncio.Task] = None
@@ -286,11 +291,13 @@ class WhiskerServer(BaseTask):
             logger.warning(
                 f"ᓚᘏᗢ Whisker: task '{task.name}' already observed; replacing entry"
             )
-        self._observed[task.name] = _ObservedTask(task_name=task.name, pipeline=task.pipeline)
+        entry = _ObservedTask(task_name=task.name, pipeline=task.pipeline)
+        self._observed[task.name] = entry
 
-        # If the WS server is already up, push topology for this task right away.
-        if self._send_queue is not None:
-            asyncio.create_task(self._send_pipeline(self._observed[task.name]))
+        # If a client is already connected, announce this task live. Otherwise
+        # it will appear in the snapshot when one connects.
+        if self._send_queue is not None and self._client is not None:
+            asyncio.create_task(self._send_task_added(entry))
 
         return WhiskerObserver(task=task, server=self, exclude_frames=exclude_frames)
 
@@ -341,7 +348,7 @@ class WhiskerServer(BaseTask):
         self._bus_events.append(event)
 
         if self._send_queue is not None and self._client is not None:
-            await self._queue_data(msgpack.packb(event))
+            await self._queue_data(event["timestamp"], msgpack.packb(event))
 
         await super().on_bus_message(message)
 
@@ -366,11 +373,6 @@ class WhiskerServer(BaseTask):
 
     async def _server_task_handler(self) -> None:
         """Run the WebSocket server until ``_server_future`` is set."""
-        # Send the topology we already know about. New observers will
-        # trigger their own send via create_observer().
-        for entry in self._observed.values():
-            await self._send_pipeline(entry)
-
         assert self._server_future is not None
         async with serve(self._client_handler, self._host, self._port):
             logger.debug(f"ᓚᘏᗢ Whisker running at ws://{self._host}:{self._port}")
@@ -391,14 +393,21 @@ class WhiskerServer(BaseTask):
             return
 
         logger.debug(f"ᓚᘏᗢ Whisker: client connected {client.remote_address}")
-        self._client = client
         try:
-            # Resend topology for every observed task so a reconnecting client
-            # picks up the current pipelines before live frames flow.
-            for entry in self._observed.values():
-                await self._send_pipeline(entry)
+            # Send the snapshot first so the UI has the task list and topology
+            # before any historical or live events arrive.
+            await client.send(msgpack.packb(self._build_snapshot()))
 
-            async for _ in self._client:
+            # Drain accumulated frames + the bus event ring buffer, merged by
+            # timestamp, so the UI timeline renders coherently from first
+            # paint. After this point we hand the client over to the live
+            # send loop.
+            backlog = self._collect_backlog()
+            if backlog is not None:
+                await client.send(backlog)
+
+            self._client = client
+            async for _ in client:
                 pass
         except ConnectionClosedOK:
             pass
@@ -407,6 +416,17 @@ class WhiskerServer(BaseTask):
         finally:
             logger.debug("ᓚᘏᗢ Whisker: client disconnected")
             self._client = None
+
+    def _collect_backlog(self) -> Optional[bytes]:
+        """Drain ``_batch`` and the bus event ring buffer, merged by timestamp."""
+        items: List[Tuple[float, bytes]] = list(self._batch)
+        self._batch = []
+        for event in self._bus_events:
+            items.append((event["timestamp"], msgpack.packb(event)))
+        if not items:
+            return None
+        items.sort(key=lambda x: x[0])
+        return b"".join(data for _, data in items)
 
     async def _close_client(self) -> None:
         if self._client:
@@ -433,9 +453,11 @@ class WhiskerServer(BaseTask):
         assert self._send_queue is not None
         while running:
             try:
-                data, flush = await asyncio.wait_for(self._send_queue.get(), timeout=0.5)
-                if data:
-                    self._batch.append(data)
+                ts, data, flush = await asyncio.wait_for(
+                    self._send_queue.get(), timeout=0.5
+                )
+                if data is not None:
+                    self._batch.append((ts if ts is not None else time.time(), data))
                 await self._maybe_send_batch(flush=flush)
                 self._send_queue.task_done()
                 running = data is not None
@@ -445,7 +467,7 @@ class WhiskerServer(BaseTask):
     async def _stop_send_task(self) -> None:
         if self._send_queue is None:
             return
-        await self._queue_data(None, True)
+        await self._queue_data(None, None, True)
         if self._send_task_handle is not None:
             await self._send_task_handle
             self._send_task_handle = None
@@ -459,21 +481,26 @@ class WhiskerServer(BaseTask):
             return
 
         send_index = len(self._batch) if index == -1 else index
-        message = b"".join(self._batch[:send_index])
+        message = b"".join(data for _, data in self._batch[:send_index])
         await self._send(message)
         self._batch = self._batch[send_index:]
 
     def _compute_batch_index(self) -> int:
         size = 0
-        for i, data in enumerate(self._batch):
+        for i, (_, data) in enumerate(self._batch):
             size += len(data)
             if size >= self._batch_size:
                 return i
         return -1
 
-    async def _queue_data(self, msg: Optional[bytes], flush: bool = False) -> None:
+    async def _queue_data(
+        self,
+        timestamp: Optional[float],
+        msg: Optional[bytes],
+        flush: bool = False,
+    ) -> None:
         assert self._send_queue is not None
-        await self._send_queue.put((msg, flush))
+        await self._send_queue.put((timestamp, msg, flush))
         if self._file and msg:
             await self._file.write(msg)
 
@@ -488,7 +515,7 @@ class WhiskerServer(BaseTask):
 
     # ---- Wire messages ------------------------------------------------------
 
-    async def _send_pipeline(self, entry: _ObservedTask) -> None:
+    def _build_topology(self, entry: _ObservedTask) -> dict:
         processors: List[Dict] = []
         connections: List[Dict] = []
 
@@ -524,21 +551,37 @@ class WhiskerServer(BaseTask):
             return new_prev
 
         traverse(entry.pipeline.entry_processors[0], [], None)
+        return {"processors": processors, "connections": connections}
 
-        msg = {
-            "type": "pipeline",
+    def _task_descriptor(self, entry: _ObservedTask) -> dict:
+        return {
             "task_id": entry.task_name,
-            "processors": processors,
-            "connections": connections,
-            "versions": {
+            "added_at": entry.added_at,
+            "topology": self._build_topology(entry),
+        }
+
+    def _build_snapshot(self) -> dict:
+        return {
+            "type": "snapshot",
+            "protocol": PROTOCOL_VERSION,
+            "timestamp": time.time(),
+            "server": {
                 "python": __PYTHON_VERSION__,
                 "pipecat": __PIPECAT_VERSION__,
                 "whisker": __WHISKER_VERSION__,
                 "platform": platform.platform(),
             },
+            "tasks": [self._task_descriptor(e) for e in self._observed.values()],
         }
-        entry.topology_sent = True
-        await self._queue_data(msgpack.packb(msg))
+
+    async def _send_task_added(self, entry: _ObservedTask) -> None:
+        ts = time.time()
+        msg = {
+            "type": "task_added",
+            "timestamp": ts,
+            **self._task_descriptor(entry),
+        }
+        await self._queue_data(ts, msgpack.packb(msg))
 
     def _frame_type(self, frame: Frame) -> str:
         if isinstance(frame, WhiskerFrame):
@@ -556,6 +599,7 @@ class WhiskerServer(BaseTask):
         frame: Frame,
     ) -> None:
         self._id += 1
+        ts = time.time()
         msg = {
             "type": self._frame_type(frame),
             "id": self._id,
@@ -564,7 +608,7 @@ class WhiskerServer(BaseTask):
             "from": processor.name,
             "event": event,
             "direction": direction.name.lower(),
-            "timestamp": time.time_ns() / 1_000_000,
+            "timestamp": ts,
             "payload": self._serializer(frame),
         }
-        await self._queue_data(msgpack.packb(msg))
+        await self._queue_data(ts, msgpack.packb(msg))
