@@ -29,14 +29,46 @@ import asyncio
 import platform
 import sys
 import time
+from collections import deque
 from dataclasses import dataclass, field, fields, is_dataclass
 from importlib.metadata import version
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Type
+from typing import TYPE_CHECKING, Any, Callable, Deque, Dict, List, Optional, Tuple, Type
 
 import aiofiles
 import msgpack
 from loguru import logger
-from pipecat.frames.frames import BotSpeakingFrame, Frame, InputAudioRawFrame
+from pipecat.bus.messages import (
+    BusActivateTaskMessage,
+    BusAddTaskMessage,
+    BusCancelMessage,
+    BusCancelTaskMessage,
+    BusDeactivateTaskMessage,
+    BusEndMessage,
+    BusEndTaskMessage,
+    BusFrameMessage,
+    BusJobCancelMessage,
+    BusJobRequestMessage,
+    BusJobResponseMessage,
+    BusJobResponseUrgentMessage,
+    BusJobStreamDataMessage,
+    BusJobStreamEndMessage,
+    BusJobStreamStartMessage,
+    BusJobUpdateMessage,
+    BusJobUpdateRequestMessage,
+    BusJobUpdateUrgentMessage,
+    BusMessage,
+    BusTaskErrorMessage,
+    BusTaskLocalErrorMessage,
+    BusTaskReadyMessage,
+    BusTaskRegistryMessage,
+)
+from pipecat.frames.frames import (
+    BotSpeakingFrame,
+    Frame,
+    InputAudioRawFrame,
+    OutputAudioRawFrame,
+    UserSpeakingFrame,
+)
 from pipecat.observers.base_observer import FrameProcessed, FramePushed
 from pipecat.pipeline.base_pipeline import BasePipeline
 from pipecat.pipeline.base_task import BaseTask
@@ -59,6 +91,54 @@ __PYTHON_VERSION__ = sys.version
 MAX_BATCH_SIZE_BYTES = 10000
 
 DEFAULT_EXCLUDE_FRAMES: Tuple[Type[Frame], ...] = (InputAudioRawFrame, BotSpeakingFrame)
+
+# Frame types that are too chatty to forward as bus events. These are
+# applied only to BusFrameMessage; non-frame bus messages always flow.
+DEFAULT_EXCLUDE_BUS_FRAMES: Tuple[Type[Frame], ...] = (
+    InputAudioRawFrame,
+    OutputAudioRawFrame,
+    UserSpeakingFrame,
+    BotSpeakingFrame,
+)
+
+BUS_EVENT_BUFFER_SIZE = 200
+
+_LIFECYCLE_BUS_MESSAGES: Tuple[type, ...] = (
+    BusActivateTaskMessage,
+    BusDeactivateTaskMessage,
+    BusEndTaskMessage,
+    BusCancelTaskMessage,
+    BusTaskReadyMessage,
+    BusTaskRegistryMessage,
+    BusAddTaskMessage,
+    BusTaskErrorMessage,
+    BusTaskLocalErrorMessage,
+    BusEndMessage,
+    BusCancelMessage,
+)
+
+_JOB_BUS_MESSAGES: Tuple[type, ...] = (
+    BusJobRequestMessage,
+    BusJobResponseMessage,
+    BusJobResponseUrgentMessage,
+    BusJobUpdateMessage,
+    BusJobUpdateRequestMessage,
+    BusJobUpdateUrgentMessage,
+    BusJobCancelMessage,
+    BusJobStreamStartMessage,
+    BusJobStreamDataMessage,
+    BusJobStreamEndMessage,
+)
+
+
+def _categorize_bus_message(message: BusMessage) -> str:
+    if isinstance(message, BusFrameMessage):
+        return "frame"
+    if isinstance(message, _JOB_BUS_MESSAGES):
+        return "job"
+    if isinstance(message, _LIFECYCLE_BUS_MESSAGES):
+        return "lifecycle"
+    return "other"
 
 
 def whisker_obj_serializer(obj: Any) -> Any:
@@ -136,6 +216,8 @@ class WhiskerServer(BaseTask):
         batch_size: int = MAX_BATCH_SIZE_BYTES,
         file_name: Optional[str] = None,
         serializer: Optional[WhiskerSerializer] = None,
+        exclude_bus_frames: Tuple[Type[Frame], ...] = DEFAULT_EXCLUDE_BUS_FRAMES,
+        bus_event_buffer_size: int = BUS_EVENT_BUFFER_SIZE,
     ):
         """Initialize the WhiskerServer.
 
@@ -148,6 +230,12 @@ class WhiskerServer(BaseTask):
             file_name: Optional path to save the debugging session for
                 later replay.
             serializer: Optional frame serializer override.
+            exclude_bus_frames: Frame types to skip when reporting
+                ``BusFrameMessage``s — applied only to the frame inside the
+                bus message, not to non-frame bus messages. Defaults to the
+                chatty audio/speaking frames.
+            bus_event_buffer_size: Maximum number of recent bus events to
+                retain server-side for replay to newly connected clients.
         """
         super().__init__(name=name)
         self._host = host
@@ -155,9 +243,15 @@ class WhiskerServer(BaseTask):
         self._batch_size = batch_size
         self._file_name = file_name
         self._serializer: WhiskerSerializer = serializer or whisker_serializer
+        self._exclude_bus_frames = exclude_bus_frames
 
         # Registered observers, keyed by task name.
         self._observed: Dict[str, _ObservedTask] = {}
+
+        # Ring buffer of recent bus events; included in the snapshot a new
+        # client receives on connect (snapshot wiring lands with the new
+        # protocol).
+        self._bus_events: Deque[dict] = deque(maxlen=bus_event_buffer_size)
 
         # Asyncio state — allocated lazily in start().
         self._id = 0
@@ -226,6 +320,47 @@ class WhiskerServer(BaseTask):
     async def on_frame_processed(self, task_name: str, data: FrameProcessed) -> None:
         """Forward a processed frame from a per-task observer."""
         await self._send_frame(task_name, "process", data.processor, data.direction, data.frame)
+
+    # ---- Bus capture --------------------------------------------------------
+
+    async def on_bus_message(self, message: BusMessage) -> None:
+        """Capture every bus message, buffer it, and stream it live.
+
+        Overrides :meth:`BaseTask.on_bus_message` to see *all* messages —
+        the base implementation early-returns for ``BusFrameMessage`` and
+        for messages targeted at other tasks, which would hide cross-task
+        traffic that is interesting to debug.
+        """
+        if isinstance(message, BusFrameMessage) and isinstance(
+            message.frame, self._exclude_bus_frames
+        ):
+            await super().on_bus_message(message)
+            return
+
+        event = self._build_bus_event(message)
+        self._bus_events.append(event)
+
+        if self._send_queue is not None and self._client is not None:
+            await self._queue_data(msgpack.packb(event))
+
+        await super().on_bus_message(message)
+
+    def _build_bus_event(self, message: BusMessage) -> dict:
+        # Walk the message via the generic serializer; strip source/target so
+        # they aren't duplicated alongside the top-level fields.
+        payload = whisker_obj_serializer(message)
+        if isinstance(payload, dict):
+            payload.pop("source", None)
+            payload.pop("target", None)
+        return {
+            "type": "bus_event",
+            "timestamp": time.time(),
+            "message_type": type(message).__name__,
+            "category": _categorize_bus_message(message),
+            "source_task": getattr(message, "source", None),
+            "target_task": getattr(message, "target", None),
+            "data": payload,
+        }
 
     # ---- WS server lifecycle ------------------------------------------------
 
