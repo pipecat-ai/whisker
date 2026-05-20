@@ -23,7 +23,7 @@ from pipecat.transports.base_transport import BaseTransport, TransportParams
 from pipecat.transports.daily.transport import DailyParams
 from pipecat.transports.websocket.fastapi import FastAPIWebsocketParams
 
-from pipecat_whisker import WhiskerFrame, WhiskerObserver
+from pipecat_whisker import WhiskerFrame, WhiskerServer
 
 load_dotenv(override=True)
 
@@ -83,8 +83,6 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
         ]
     )
 
-    whisker = WhiskerObserver(pipeline, file_name="basic-pipeline.bin")
-
     task = PipelineTask(
         pipeline,
         params=PipelineParams(
@@ -92,8 +90,10 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
             enable_usage_metrics=True,
         ),
         idle_timeout_secs=runner_args.pipeline_idle_timeout_secs,
-        observers=[whisker],
     )
+
+    whisker = WhiskerServer(file_name="basic-pipeline.bin")
+    task.add_observer(whisker.create_observer(task))
 
     @transport.event_handler("on_client_connected")
     async def on_client_connected(transport, client):
@@ -110,7 +110,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
         await task.cancel()
 
     runner = PipelineRunner(handle_sigint=runner_args.handle_sigint)
-
+    await runner.spawn(whisker)
     await runner.run(task)
 
 
