@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2024–2025, Daily
+# Copyright (c) 2024–2026, Daily
 #
 # SPDX-License-Identifier: BSD 2-Clause License
 #
@@ -12,8 +12,12 @@ from pipecat.audio.vad.silero import SileroVADAnalyzer
 from pipecat.frames.frames import LLMRunFrame
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
-from pipecat.pipeline.task import PipelineParams, PipelineTask
-from pipecat.processors.aggregators.openai_llm_context import OpenAILLMContext
+from pipecat.pipeline.worker import PipelineParams, PipelineWorker
+from pipecat.processors.aggregators.llm_context import LLMContext
+from pipecat.processors.aggregators.llm_response_universal import (
+    LLMContextAggregatorPair,
+    LLMUserAggregatorParams,
+)
 from pipecat.runner.types import RunnerArguments
 from pipecat.runner.utils import create_transport
 from pipecat.services.cartesia.tts import CartesiaTTSService
@@ -34,17 +38,14 @@ transport_params = {
     "daily": lambda: DailyParams(
         audio_in_enabled=True,
         audio_out_enabled=True,
-        vad_analyzer=SileroVADAnalyzer(),
     ),
     "twilio": lambda: FastAPIWebsocketParams(
         audio_in_enabled=True,
         audio_out_enabled=True,
-        vad_analyzer=SileroVADAnalyzer(),
     ),
     "webrtc": lambda: TransportParams(
         audio_in_enabled=True,
         audio_out_enabled=True,
-        vad_analyzer=SileroVADAnalyzer(),
     ),
 }
 
@@ -56,34 +57,37 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
 
     tts = CartesiaTTSService(
         api_key=os.getenv("CARTESIA_API_KEY"),
-        voice_id="71a7ad14-091c-4e8e-a314-022ece01c121",  # British Reading Lady
+        settings=CartesiaTTSService.Settings(
+            voice="71a7ad14-091c-4e8e-a314-022ece01c121",  # British Reading Lady
+        ),
     )
 
-    llm = OpenAILLMService(api_key=os.getenv("OPENAI_API_KEY"))
+    llm = OpenAILLMService(
+        api_key=os.getenv("OPENAI_API_KEY"),
+        settings=OpenAILLMService.Settings(
+            system_instruction="You are a helpful LLM in a WebRTC call. Your goal is to demonstrate your capabilities in a succinct way. Your output will be converted to audio so don't include special characters in your answers. Respond to what the user said in a creative and helpful way."
+        ),
+    )
 
-    messages = [
-        {
-            "role": "system",
-            "content": "You are a helpful LLM in a WebRTC call. Your goal is to demonstrate your capabilities in a succinct way. Your output will be converted to audio so don't include special characters in your answers. Respond to what the user said in a creative and helpful way.",
-        },
-    ]
-
-    context = OpenAILLMContext(messages)
-    context_aggregator = llm.create_context_aggregator(context)
+    context = LLMContext()
+    user_aggregator, assistant_aggregator = LLMContextAggregatorPair(
+        context,
+        user_params=LLMUserAggregatorParams(vad_analyzer=SileroVADAnalyzer()),
+    )
 
     pipeline = Pipeline(
         [
             transport.input(),  # Transport user input
             stt,
-            context_aggregator.user(),  # User responses
+            user_aggregator,  # User responses
             llm,  # LLM
             tts,  # TTS
             transport.output(),  # Transport bot output
-            context_aggregator.assistant(),  # Assistant spoken responses
+            assistant_aggregator,  # Assistant spoken responses
         ]
     )
 
-    task = PipelineTask(
+    worker = PipelineWorker(
         pipeline,
         params=PipelineParams(
             enable_metrics=True,
@@ -93,25 +97,25 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
     )
 
     whisker = WhiskerServer(file_name="basic-pipeline.bin")
-    task.add_observer(whisker.create_observer(task))
+    worker.add_observer(whisker.create_observer(worker))
 
     @transport.event_handler("on_client_connected")
     async def on_client_connected(transport, client):
         logger.info(f"Client connected")
         # Whisker frame.
-        await task.queue_frame(WhiskerFrame())
+        await worker.queue_frame(WhiskerFrame())
         # Kick off the conversation.
-        messages.append({"role": "system", "content": "Please introduce yourself to the user."})
-        await task.queue_frames([LLMRunFrame()])
+        context.add_message({"role": "system", "content": "Please introduce yourself to the user."})
+        await worker.queue_frames([LLMRunFrame()])
 
     @transport.event_handler("on_client_disconnected")
     async def on_client_disconnected(transport, client):
         logger.info(f"Client disconnected")
-        await task.cancel()
+        await runner.cancel()
 
     runner = PipelineRunner(handle_sigint=runner_args.handle_sigint)
-    await runner.spawn(whisker)
-    await runner.run(task)
+    await runner.add_workers(whisker, worker)
+    await runner.run()
 
 
 async def bot(runner_args: RunnerArguments):
