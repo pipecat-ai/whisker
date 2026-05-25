@@ -8,19 +8,20 @@
 
 **Whisker** is a low-level debugger for the [Pipecat](https://github.com/pipecat-ai/pipecat) voice and multimodal conversational AI framework.
 
-It lets you **visualize pipelines and debug frames in real time** — so you can see exactly what your bot is thinking and doing.
+Pipecat bots are multi-worker systems: workers spawn sub-workers, send jobs to each other, and exchange messages on a shared bus. Whisker gives you a single view over the whole system so you can see exactly what every part is doing.
 
 With **Whisker** you can:
 
-- 🗺️ View a live graph of every pipeline (one or many) running in your Pipecat process
-- ⚡ Watch frame processors flash in real time as frames pass through them
+- 🧑‍🤝‍🧑 Browse every worker and sub-worker running in your Pipecat process — with live status (added / ready / active / ended / cancelled / errored), runner, uptime, and parent
+- 🗺️ Inspect the selected worker's pipeline as a processor tree, or pop open a draggable, resizable cytoscape graph for the full flow
+- 🧰 See every job (request → response / cancel) flowing between workers, filter by source worker, and drill into a job's source, targets, status, and duration
+- 🚌 Follow messages on the Pipecat bus — filter by category (lifecycle / frame / job / other) or by message type
 - 📌 Select a processor to inspect the frames it has handled (both pushed and processed)
-- 🔍 Filter frames by name to quickly find the ones you care about
+- 🔍 Filter frames by name and by direction (push / process / upstream / downstream)
 - 🧵 Select a frame to trace its full path through the pipeline
-- 🚌 Follow messages on the Pipecat bus between cooperating pipeline workers
 - 💾 Save and load previous sessions for review, collaboration, or troubleshooting
 
-Think of Whisker as **trace logging with batteries**.
+Think of Whisker as **trace logging with batteries** for multi-worker Pipecat bots.
 
 <p align="center"><img src="https://raw.githubusercontent.com/pipecat-ai/whisker/refs/heads/main/whisker-image.png" alt="Whisker" width="500"/></p>
 
