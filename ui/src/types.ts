@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2025, Daily
+// Copyright (c) 2025-2026, Daily
 //
 // SPDX-License-Identifier: BSD 2-Clause License
 //
@@ -11,6 +11,13 @@ export type Processor = {
   type: string;
 };
 
+export type Connection = { from: string; to: string };
+
+export type Topology = {
+  processors: Processor[];
+  connections: Connection[];
+};
+
 export type Versions = {
   platform: string;
   python: string;
@@ -18,18 +25,12 @@ export type Versions = {
   whisker: string;
 };
 
-export type Connection = { from: string; to: string };
-
-export type PipelineMessage = {
-  type: "pipeline";
-  processors: Processor[];
-  connections: Connection[];
-  versions?: Versions;
-};
+export type FrameType = "frame" | "frame:whisker" | "frame:whisker-urgent";
 
 export type FrameMessage = {
-  type: "frame";
+  type: FrameType;
   id: number;
+  worker_id: string;
   name: string;
   from: string;
   event: "process" | "push";
@@ -38,4 +39,91 @@ export type FrameMessage = {
   payload: any;
 };
 
-export type ServerMessage = PipelineMessage | FrameMessage;
+export type WorkerDescriptor = {
+  worker_id: string;
+  added_at: number;
+  topology: Topology;
+  status?: string;
+  parent?: string | null;
+  runner?: string | null;
+  started_at?: number | null;
+  bridged?: boolean | null;
+  active?: boolean | null;
+};
+
+export type SnapshotMessage = {
+  type: "snapshot";
+  protocol: string;
+  timestamp: number;
+  server: Versions;
+  workers: WorkerDescriptor[];
+};
+
+export type WorkerAddedMessage = {
+  type: "worker_added";
+  timestamp: number;
+  worker_id: string;
+  added_at: number;
+  topology: Topology;
+  status?: string;
+  parent?: string | null;
+  runner?: string | null;
+  started_at?: number | null;
+  bridged?: boolean | null;
+  active?: boolean | null;
+};
+
+export type WorkerRemovedMessage = {
+  type: "worker_removed";
+  timestamp: number;
+  worker_id: string;
+};
+
+export type WorkerStatusMessage = {
+  type: "worker_status";
+  timestamp: number;
+  worker_id: string;
+  status: string;
+  runner?: string | null;
+  started_at?: number | null;
+  bridged?: boolean | null;
+  active?: boolean | null;
+};
+
+export type BusEventCategory = "frame" | "job" | "lifecycle" | "other";
+
+export type BusEventMessage = {
+  type: "bus_event";
+  timestamp: number;
+  message_type: string;
+  category: BusEventCategory;
+  source_worker: string | null;
+  target_worker: string | null;
+  data: any;
+};
+
+export type ServerMessage =
+  | SnapshotMessage
+  | WorkerAddedMessage
+  | WorkerRemovedMessage
+  | WorkerStatusMessage
+  | FrameMessage
+  | BusEventMessage;
+
+// Job lifecycle derived client-side by replaying the BusJob* bus events.
+export type JobStatus =
+  | "running"
+  | "completed"
+  | "cancelled"
+  | "failed"
+  | "error";
+
+export type Job = {
+  job_id: string;
+  job_name: string | null;
+  source: string;
+  targets: string[];
+  status: JobStatus;
+  started_at: number;
+  completed_at: number | null;
+};

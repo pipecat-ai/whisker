@@ -1,19 +1,77 @@
 //
-// Copyright (c) 2025, Daily
+// Copyright (c) 2025-2026, Daily
 //
 // SPDX-License-Identifier: BSD 2-Clause License
 //
 
 import { create } from "zustand";
 import {
+  BusEventMessage,
   Connection,
   FrameMessage,
-  PipelineMessage,
+  Job,
+  JobStatus,
   Processor,
+  SnapshotMessage,
+  Topology,
   Versions,
+  WorkerAddedMessage,
+  WorkerDescriptor,
+  WorkerRemovedMessage,
+  WorkerStatusMessage,
 } from "./types";
 
 type Theme = "light" | "dark";
+
+export type Worker = {
+  worker_id: string;
+  added_at: number;
+  topology: Topology;
+  processors: Record<string, Processor>;
+  frames: Record<string, FrameMessage[]>;
+  framePaths: Record<string, Processor[]>;
+  status?: string;
+  parent?: string | null;
+  runner?: string | null;
+  started_at?: number | null;
+  bridged?: boolean | null;
+  active?: boolean | null;
+};
+
+const MAX_BUS_EVENTS = 1000;
+
+// Stable empty references so selectors don't trigger re-renders on every call.
+export const EMPTY_PROCESSORS: Record<string, Processor> = Object.freeze(
+  {}
+) as Record<string, Processor>;
+export const EMPTY_CONNECTIONS: Connection[] = Object.freeze(
+  []
+) as Connection[];
+export const EMPTY_FRAMES: Record<string, FrameMessage[]> = Object.freeze(
+  {}
+) as Record<string, FrameMessage[]>;
+const EMPTY_FRAME_PATHS: Record<string, Processor[]> = Object.freeze(
+  {}
+) as Record<string, Processor[]>;
+
+function workerFromDescriptor(desc: WorkerDescriptor): Worker {
+  const processors: Record<string, Processor> = {};
+  for (const p of desc.topology.processors) processors[p.id] = p;
+  return {
+    worker_id: desc.worker_id,
+    added_at: desc.added_at,
+    topology: desc.topology,
+    processors,
+    frames: {},
+    framePaths: {},
+    status: desc.status,
+    parent: desc.parent ?? null,
+    runner: desc.runner ?? null,
+    started_at: desc.started_at ?? null,
+    bridged: desc.bridged ?? null,
+    active: desc.active ?? null,
+  };
+}
 
 type State = {
   theme: Theme;
@@ -25,30 +83,53 @@ type State = {
   connected: boolean;
   setConnected: (c: boolean) => void;
 
-  processors: Record<string, Processor>;
-  connections: Connection[];
+  // Multi-worker model.
+  workers: Record<string, Worker>;
+  workerOrder: string[];
+  activeWorkerId?: string;
+
   versions?: Versions;
+  protocol?: string;
 
-  frames: Record<string, FrameMessage[]>;
-  framePaths: Record<number, Processor[]>;
+  busEvents: BusEventMessage[];
 
+  // Derived from BusJob* bus messages — request seeds the entry,
+  // response/cancel updates status + completed_at.
+  jobs: Record<string, Job>;
+
+  // Selections track the active worker; cleared when the active worker changes.
   selectedProcessor?: Processor;
   selectedFrame?: FrameMessage;
   selectedFramePath?: FrameMessage;
+  selectedJob?: Job;
 
-  // Frame filters
   showPush: boolean;
   showProcess: boolean;
   setShowPush: (v: boolean) => void;
   setShowProcess: (v: boolean) => void;
 
-  resetPipeline: () => void;
-  setPipeline: (pipeline: PipelineMessage) => void;
+  // Last panel the user focused. Drives selection styling so the user
+  // can tell which selection arrow keys will move — the focused panel's
+  // selection paints solid; the others fade to muted gray.
+  keyboardFocus: "workers" | "pipeline" | "jobs" | "frames" | "path" | null;
+  setKeyboardFocus: (
+    v: "workers" | "pipeline" | "jobs" | "frames" | "path" | null
+  ) => void;
+
+  applySnapshot: (m: SnapshotMessage) => void;
+  addWorker: (m: WorkerAddedMessage) => void;
+  removeWorker: (m: WorkerRemovedMessage) => void;
+  setWorkerStatus: (m: WorkerStatusMessage) => void;
   pushFrames: (frames: FrameMessage[]) => void;
+  pushBusEvents: (events: BusEventMessage[]) => void;
+
+  setActiveWorker: (id?: string) => void;
+  resetSession: () => void;
 
   setSelectedProcessorById: (id?: string) => void;
   setSelectedFrame: (f?: FrameMessage) => void;
   setSelectedFramePath: (f?: FrameMessage) => void;
+  setSelectedJob: (j?: Job) => void;
 };
 
 export const useStore = create<State>((set, get) => ({
@@ -68,83 +149,307 @@ export const useStore = create<State>((set, get) => ({
   connected: false,
   setConnected: (c) => set({ connected: c }),
 
-  processors: {},
-  connections: [],
-  versions: undefined,
+  workers: {},
+  workerOrder: [],
+  activeWorkerId: undefined,
 
-  frames: {},
-  framePaths: {},
+  versions: undefined,
+  protocol: undefined,
+  busEvents: [],
+  jobs: {},
 
   selectedProcessor: undefined,
   selectedFrame: undefined,
   selectedFramePath: undefined,
+  selectedJob: undefined,
 
-  // Frame filters
   showPush: true,
   showProcess: true,
   setShowPush: (v) => set({ showPush: v }),
   setShowProcess: (v) => set({ showProcess: v }),
 
-  resetPipeline: () => {
+  keyboardFocus: null,
+  setKeyboardFocus: (v) => set({ keyboardFocus: v }),
+
+  applySnapshot: (m) => {
+    const workers: Record<string, Worker> = {};
+    const workerOrder: string[] = [];
+    for (const desc of m.workers) {
+      workers[desc.worker_id] = workerFromDescriptor(desc);
+      workerOrder.push(desc.worker_id);
+    }
     set({
-      frames: {},
-      framePaths: {},
+      workers,
+      workerOrder,
+      activeWorkerId: workerOrder[0],
+      versions: m.server,
+      protocol: m.protocol,
+      busEvents: [],
+      jobs: {},
+      selectedProcessor: undefined,
       selectedFrame: undefined,
       selectedFramePath: undefined,
-      selectedProcessor: undefined,
-      processors: {},
-      connections: [],
-      versions: undefined,
     });
   },
 
-  setPipeline: (pipeline) => {
+  addWorker: (m) => {
     set((s) => {
-      const processors = {};
-      for (const p of pipeline.processors) {
-        processors[p.id] = p;
-      }
-
-      s.resetPipeline();
-
+      if (s.workers[m.worker_id]) return s;
+      const w = workerFromDescriptor({
+        worker_id: m.worker_id,
+        added_at: m.added_at,
+        topology: m.topology,
+        status: m.status,
+        parent: m.parent,
+        runner: m.runner,
+        started_at: m.started_at,
+        bridged: m.bridged,
+        active: m.active,
+      });
       return {
-        processors: processors,
-        connections: pipeline.connections,
-        versions: pipeline.versions,
+        workers: { ...s.workers, [m.worker_id]: w },
+        workerOrder: [...s.workerOrder, m.worker_id],
+        activeWorkerId: s.activeWorkerId ?? m.worker_id,
       };
+    });
+  },
+
+  removeWorker: (m) => {
+    set((s) => {
+      if (!s.workers[m.worker_id]) return s;
+      const { [m.worker_id]: _, ...rest } = s.workers;
+      const order = s.workerOrder.filter((id) => id !== m.worker_id);
+      const becameActiveless = s.activeWorkerId === m.worker_id;
+      return {
+        workers: rest,
+        workerOrder: order,
+        activeWorkerId: becameActiveless ? order[0] : s.activeWorkerId,
+        // If the active worker went away, drop selections that referenced it.
+        selectedProcessor: becameActiveless ? undefined : s.selectedProcessor,
+        selectedFrame: becameActiveless ? undefined : s.selectedFrame,
+        selectedFramePath: becameActiveless ? undefined : s.selectedFramePath,
+      };
+    });
+  },
+
+  setWorkerStatus: (m) => {
+    set((s) => {
+      const w = s.workers[m.worker_id];
+      if (!w) return s;
+      // ``worker_status`` may carry metadata captured from
+      // ``BusWorkerReadyMessage`` — propagate any provided fields.
+      const updated: Worker = { ...w, status: m.status };
+      if (m.runner !== undefined && m.runner !== null) updated.runner = m.runner;
+      if (m.started_at !== undefined && m.started_at !== null)
+        updated.started_at = m.started_at;
+      if (m.bridged !== undefined && m.bridged !== null)
+        updated.bridged = m.bridged;
+      if (m.active !== undefined && m.active !== null) updated.active = m.active;
+      return { workers: { ...s.workers, [m.worker_id]: updated } };
     });
   },
 
   pushFrames: (messages) => {
     set((s) => {
-      const frames = { ...s.frames };
-      const framePaths = { ...s.framePaths };
-
+      const workers = { ...s.workers };
       for (const f of messages) {
-        // Frames
+        const w = workers[f.worker_id];
+        if (!w) continue;
+
+        const frames = { ...w.frames };
+        const framePaths = { ...w.framePaths };
+
         const listFrames = frames[f.from] || [];
         frames[f.from] = [f, ...listFrames];
 
-        // Frame paths
         const listProcessors = framePaths[f.name] || [];
-        const proc = s.processors[f.from];
+        const proc = w.processors[f.from];
         if (proc && !listProcessors.some((p) => p.id === proc.id)) {
           framePaths[f.name] = [proc, ...listProcessors];
         } else {
           framePaths[f.name] = listProcessors;
         }
-      }
 
-      return { frames, framePaths };
+        workers[f.worker_id] = { ...w, frames, framePaths };
+      }
+      return { workers };
     });
   },
 
-  setSelectedProcessorById: (id) =>
-    set((state) => ({
-      selectedProcessor: id ? state.processors[id] : undefined,
-    })),
+  pushBusEvents: (events) => {
+    set((s) => {
+      const merged = s.busEvents.concat(events);
+      const trimmed =
+        merged.length > MAX_BUS_EVENTS
+          ? merged.slice(merged.length - MAX_BUS_EVENTS)
+          : merged;
+
+      // Replay BusJob* messages to keep the derived ``jobs`` map current.
+      // Any BusJob* with a job_id seeds (or updates) the entry — the
+      // server may have started before whisker connected, so we can't
+      // rely on always seeing the original Request first.
+      let jobs = s.jobs;
+      let jobsChanged = false;
+      const ensureChanged = () => {
+        if (!jobsChanged) {
+          jobs = { ...jobs };
+          jobsChanged = true;
+        }
+      };
+      for (const e of events) {
+        const mt = e.message_type;
+        if (!mt.startsWith("BusJob")) continue;
+        const data = (e.data ?? {}) as Record<string, unknown>;
+        const jobId = data.job_id as string | undefined;
+        if (!jobId) continue;
+
+        const existing = jobs[jobId];
+        const target = e.target_worker ?? null;
+        const source = e.source_worker ?? null;
+
+        if (mt === "BusJobRequestMessage") {
+          ensureChanged();
+          if (existing) {
+            if (target && !existing.targets.includes(target)) {
+              jobs[jobId] = {
+                ...existing,
+                targets: [...existing.targets, target],
+              };
+            }
+          } else {
+            jobs[jobId] = {
+              job_id: jobId,
+              job_name: (data.job_name as string | undefined) ?? null,
+              source: source ?? "?",
+              targets: target ? [target] : [],
+              status: "running",
+              started_at: e.timestamp,
+              completed_at: null,
+            };
+          }
+        } else if (
+          mt === "BusJobResponseMessage" ||
+          mt === "BusJobResponseUrgentMessage"
+        ) {
+          ensureChanged();
+          const raw = data.status as string | undefined;
+          const status: JobStatus =
+            raw === "completed" ||
+            raw === "cancelled" ||
+            raw === "failed" ||
+            raw === "error"
+              ? raw
+              : "completed";
+          if (existing) {
+            jobs[jobId] = { ...existing, status, completed_at: e.timestamp };
+          } else {
+            // Late-seen response — synthesize a stub. ``source`` of a
+            // response is the *doer*; the requester is the response's
+            // ``target``.
+            jobs[jobId] = {
+              job_id: jobId,
+              job_name: (data.job_name as string | undefined) ?? null,
+              source: target ?? "?",
+              targets: source ? [source] : [],
+              status,
+              started_at: e.timestamp,
+              completed_at: e.timestamp,
+            };
+          }
+        } else if (mt === "BusJobCancelMessage") {
+          ensureChanged();
+          if (existing) {
+            jobs[jobId] = {
+              ...existing,
+              status: "cancelled",
+              completed_at: e.timestamp,
+            };
+          } else {
+            jobs[jobId] = {
+              job_id: jobId,
+              job_name: null,
+              source: source ?? "?",
+              targets: target ? [target] : [],
+              status: "cancelled",
+              started_at: e.timestamp,
+              completed_at: e.timestamp,
+            };
+          }
+        } else if (!existing) {
+          // Any other BusJob* (update / stream / etc.) without a prior
+          // entry — record a stub so the job at least appears.
+          ensureChanged();
+          jobs[jobId] = {
+            job_id: jobId,
+            job_name: (data.job_name as string | undefined) ?? null,
+            source: source ?? "?",
+            targets: target ? [target] : [],
+            status: "running",
+            started_at: e.timestamp,
+            completed_at: null,
+          };
+        }
+      }
+
+      return jobsChanged
+        ? { busEvents: trimmed, jobs }
+        : { busEvents: trimmed };
+    });
+  },
+
+  setActiveWorker: (id) =>
+    set({
+      activeWorkerId: id,
+      selectedProcessor: undefined,
+      selectedFrame: undefined,
+      selectedFramePath: undefined,
+      selectedJob: undefined,
+    }),
+
+  resetSession: () => {
+    set({
+      workers: {},
+      workerOrder: [],
+      activeWorkerId: undefined,
+      versions: undefined,
+      protocol: undefined,
+      busEvents: [],
+      jobs: {},
+      selectedProcessor: undefined,
+      selectedFrame: undefined,
+      selectedFramePath: undefined,
+      selectedJob: undefined,
+    });
+  },
+
+  setSelectedProcessorById: (id) => {
+    const { activeWorkerId, workers } = get();
+    const worker = activeWorkerId ? workers[activeWorkerId] : undefined;
+    set({
+      selectedProcessor: id && worker ? worker.processors[id] : undefined,
+    });
+  },
 
   setSelectedFrame: (f) => set({ selectedFrame: f }),
-
   setSelectedFramePath: (f) => set({ selectedFramePath: f }),
+  setSelectedJob: (j) => set({ selectedJob: j }),
 }));
+
+// Selectors for the active worker's data. Components should use these instead
+// of reaching into `state.workers` directly so that switching the active
+// worker re-targets every panel in one step.
+
+export const selectActiveWorker = (s: State): Worker | undefined =>
+  s.activeWorkerId ? s.workers[s.activeWorkerId] : undefined;
+
+export const selectProcessors = (s: State): Record<string, Processor> =>
+  selectActiveWorker(s)?.processors ?? EMPTY_PROCESSORS;
+
+export const selectConnections = (s: State): Connection[] =>
+  selectActiveWorker(s)?.topology.connections ?? EMPTY_CONNECTIONS;
+
+export const selectFrames = (s: State): Record<string, FrameMessage[]> =>
+  selectActiveWorker(s)?.frames ?? EMPTY_FRAMES;
+
+export const selectFramePaths = (s: State): Record<string, Processor[]> =>
+  selectActiveWorker(s)?.framePaths ?? EMPTY_FRAME_PATHS;
