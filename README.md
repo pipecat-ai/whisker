@@ -8,20 +8,20 @@
 
 **Whisker** is a low-level debugger for the [Pipecat](https://github.com/pipecat-ai/pipecat) voice and multimodal conversational AI framework.
 
-Pipecat bots are multi-worker systems: workers spawn sub-workers, send jobs to each other, and exchange messages on a shared bus. Whisker gives you a single view over the whole system so you can see exactly what every part is doing.
+Pipecat is a multi-agent systems: workers spawn sub-workers, send jobs to each other, and exchange messages on a shared bus. Whisker gives you a single view over the whole system so you can see exactly what every part is doing.
 
 With **Whisker** you can:
 
-- 🧑‍🤝‍🧑 Browse every worker and sub-worker running in your Pipecat process — with live status (added / ready / active / ended / cancelled / errored), runner, uptime, and parent
-- 🗺️ Inspect the selected worker's pipeline as a processor tree, or pop open a draggable, resizable cytoscape graph for the full flow
-- 🧰 See every job (request → response / cancel) flowing between workers, filter by source worker, and drill into a job's source, targets, status, and duration
-- 🚌 Follow messages on the Pipecat bus — filter by category (lifecycle / frame / job / other) or by message type
-- 📌 Select a processor to inspect the frames it has handled (both pushed and processed)
-- 🔍 Filter frames by name and by direction (push / process / upstream / downstream)
-- 🧵 Select a frame to trace its full path through the pipeline
-- 💾 Save and load previous sessions for review, collaboration, or troubleshooting
+- 🧑‍🤝‍🧑 Browse every worker and sub-worker running in your Pipecat process
+- 🗺️ Inspect the selected worker's pipeline
+- 🧰 See every job flowing between workers
+- 🚌 Follow messages on the Pipecat bus
+- 📌 Select a processor to inspect its frames
+- 🔍 Filter frames by name and direction
+- 🧵 Trace a frame's path through the pipeline
+- 💾 Save and load previous sessions
 
-Think of Whisker as **trace logging with batteries** for multi-worker Pipecat bots.
+Think of Whisker as **trace logging with batteries** for Pipecat applications.
 
 <p align="center"><img src="https://raw.githubusercontent.com/pipecat-ai/whisker/refs/heads/main/whisker-image.png" alt="Whisker" width="500"/></p>
 
