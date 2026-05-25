@@ -6,15 +6,16 @@
 
 import { useMemo, useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useStore } from "../state.store";
+import { selectFrames, useStore } from "../state.store";
 import { FrameItem } from "./FrameItem";
 import { FrameFilters } from "./FrameFilters";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 
 export function FrameInspector() {
   const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set());
   const [showUpstream, setShowUpstream] = useState(true);
   const [showDownstream, setShowDownstream] = useState(true);
-  const frames = useStore((s) => s.frames);
+  const frames = useStore(selectFrames);
   const showPush = useStore((s) => s.showPush);
   const showProcess = useStore((s) => s.showProcess);
   const setShowPush = useStore((s) => s.setShowPush);
@@ -23,6 +24,7 @@ export function FrameInspector() {
   const selectedFrame = useStore((s) => s.selectedFrame);
   const setSelectedFrame = useStore((s) => s.setSelectedFrame);
   const setSelectedFramePath = useStore((s) => s.setSelectedFramePath);
+  const setKeyboardFocus = useStore((s) => s.setKeyboardFocus);
 
   const getBaseName = (name: string) => name.replace(/#\d+$/, "");
 
@@ -85,25 +87,58 @@ export function FrameInspector() {
     },
   });
 
+  // Up/Down navigation. Handler reads live state and lives at the parent
+  // so it isn't tied to a single virtualized item's closure.
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+    if (!selectedFrame || sortedFrames.length === 0) return;
+    const idx = sortedFrames.findIndex((f) => f.id === selectedFrame.id);
+    if (idx < 0) return;
+    if (e.key === "ArrowDown" && idx < sortedFrames.length - 1) {
+      e.preventDefault();
+      const next = sortedFrames[idx + 1];
+      setSelectedFrame(next);
+      setSelectedFramePath(next);
+      virtualizer.scrollToIndex(idx + 1, { align: "auto" });
+    }
+    if (e.key === "ArrowUp" && idx > 0) {
+      e.preventDefault();
+      const prev = sortedFrames[idx - 1];
+      setSelectedFrame(prev);
+      setSelectedFramePath(prev);
+      virtualizer.scrollToIndex(idx - 1, { align: "auto" });
+    }
+  };
+
   return (
-    <div className="flex flex-col gap-2 h-full min-h-0">
-      <FrameFilters
-        availableTypes={availableTypes}
-        selectedTypes={selectedTypes}
-        onTypesChange={setSelectedTypes}
-        showPush={showPush}
-        showProcess={showProcess}
-        showUpstream={showUpstream}
-        showDownstream={showDownstream}
-        onShowPushChange={setShowPush}
-        onShowProcessChange={setShowProcess}
-        onShowUpstreamChange={setShowUpstream}
-        onShowDownstreamChange={setShowDownstream}
-      />
-      <span className="text-sm text-foreground/70 my-1 flex-shrink-0">
-        Showing {sortedFrames.length} frames out of {allFrames.length}
-      </span>
-      <div className="border border-dashed rounded-lg p-1 overflow-hidden flex flex-col flex-1 min-h-0 my-1">
+    <Card className="flex flex-col min-h-0 overflow-hidden h-full">
+      <CardHeader className="pb-2 flex-shrink-0 px-4 pt-4">
+        <CardTitle className="text-sm text-muted-foreground truncate">
+          Frames{selected ? ` (processor: ${selected.name})` : ""}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="flex-1 min-h-0 overflow-hidden p-2">
+        <div className="flex flex-col gap-2 h-full min-h-0">
+          <FrameFilters
+            availableTypes={availableTypes}
+            selectedTypes={selectedTypes}
+            onTypesChange={setSelectedTypes}
+            showPush={showPush}
+            showProcess={showProcess}
+            showUpstream={showUpstream}
+            showDownstream={showDownstream}
+            onShowPushChange={setShowPush}
+            onShowProcessChange={setShowProcess}
+            onShowUpstreamChange={setShowUpstream}
+            onShowDownstreamChange={setShowDownstream}
+            visibleCount={sortedFrames.length}
+            totalCount={allFrames.length}
+          />
+          <div
+            className="border border-dashed rounded-lg p-1 overflow-hidden flex flex-col flex-1 min-h-0 my-1"
+            onKeyDown={handleKeyDown}
+            onFocus={() => setKeyboardFocus("frames")}
+          >
         <div
           ref={parentRef}
           className="flex-1 min-h-0 overflow-auto font-mono text-xs"
@@ -153,7 +188,9 @@ export function FrameInspector() {
             </div>
           )}
         </div>
-      </div>
-    </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

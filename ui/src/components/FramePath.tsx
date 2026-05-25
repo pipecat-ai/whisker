@@ -6,18 +6,24 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useStore } from "../state.store";
+import {
+  selectFramePaths,
+  selectFrames,
+  selectProcessors,
+  useStore,
+} from "../state.store";
 import { FramePathItem } from "./FramePathItem";
 
 export function FramePath() {
-  const frames = useStore((s) => s.frames);
-  const framePaths = useStore((s) => s.framePaths);
-  const processors = useStore((s) => s.processors);
+  const frames = useStore(selectFrames);
+  const framePaths = useStore(selectFramePaths);
+  const processors = useStore(selectProcessors);
   const selectedFrame = useStore((s) => s.selectedFrame);
   const selectedFramePath = useStore((s) => s.selectedFramePath);
   const setSelectedFrame = useStore((s) => s.setSelectedFrame);
   const setSelectedFramePath = useStore((s) => s.setSelectedFramePath);
   const setSelectedProcessor = useStore((s) => s.setSelectedProcessorById);
+  const setKeyboardFocus = useStore((s) => s.setKeyboardFocus);
   const showPush = useStore((s) => s.showPush);
   const showProcess = useStore((s) => s.showProcess);
 
@@ -71,16 +77,44 @@ export function FramePath() {
       );
       if (idx >= 0) {
         virtualizer.scrollToIndex(idx, { align: "center", behavior: "smooth" });
-        const item = itemRefs.current.get(idx);
-        if (item) {
-          item.focus();
-        }
       }
     }
   }, [selectedFramePath, frameTimeline, virtualizer]);
 
+  // Up/Down navigation. Handler lives at the parent so it reads live state
+  // and isn't pinned to a captured ``virtualItem.index`` from a particular
+  // FramePathItem render — the virtualizer recycles offscreen items, so
+  // per-item handlers would also lose their target when the focused row
+  // scrolled away.
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+    if (!selectedFramePath || frameTimeline.length === 0) return;
+    const idx = frameTimeline.findIndex(
+      ({ frame }) => frame.id === selectedFramePath.id
+    );
+    if (idx < 0) return;
+    if (e.key === "ArrowDown" && idx < frameTimeline.length - 1) {
+      e.preventDefault();
+      const next = frameTimeline[idx + 1];
+      setSelectedFramePath(next.frame);
+      setSelectedFrame(next.frame);
+      setSelectedProcessor(next.processor.id);
+    }
+    if (e.key === "ArrowUp" && idx > 0) {
+      e.preventDefault();
+      const prev = frameTimeline[idx - 1];
+      setSelectedFramePath(prev.frame);
+      setSelectedFrame(prev.frame);
+      setSelectedProcessor(prev.processor.id);
+    }
+  };
+
   return (
-    <div className="flex flex-col flex-1 min-h-0 h-full">
+    <div
+      className="flex flex-col flex-1 min-h-0 h-full"
+      onKeyDown={handleKeyDown}
+      onFocus={() => setKeyboardFocus("path")}
+    >
       <div className="border border-dashed rounded-lg p-1 overflow-hidden flex flex-col flex-1 min-h-0 my-1">
         <div
           ref={parentRef}
@@ -105,14 +139,7 @@ export function FramePath() {
                 return (
                   <div
                     key={`path-${frame.id}-${virtualItem.index}`}
-                    ref={(el) => {
-                      if (el) {
-                        itemRefs.current.set(virtualItem.index, el);
-                        virtualizer.measureElement(el);
-                      } else {
-                        itemRefs.current.delete(virtualItem.index);
-                      }
-                    }}
+                    ref={virtualizer.measureElement}
                     data-index={virtualItem.index}
                     style={{
                       position: "absolute",
@@ -124,6 +151,14 @@ export function FramePath() {
                     }}
                   >
                     <FramePathItem
+                      // Route the focusable inner div into ``itemRefs`` —
+                      // the outer absolute-positioned wrapper has no
+                      // ``tabIndex`` so calling ``.focus()`` on it does
+                      // nothing, breaking the Up/Down keyboard nav.
+                      ref={(el) => {
+                        if (el) itemRefs.current.set(virtualItem.index, el);
+                        else itemRefs.current.delete(virtualItem.index);
+                      }}
                       idx={virtualItem.index}
                       frame={frame}
                       processor={processor}
@@ -132,23 +167,6 @@ export function FramePath() {
                         setSelectedFramePath(frame);
                         setSelectedFrame(frame);
                         setSelectedProcessor(processor.id);
-                      }}
-                      onKeyDown={(e) => {
-                        if (
-                          e.key === "ArrowDown" &&
-                          virtualItem.index < frameTimeline.length - 1
-                        ) {
-                          const next = frameTimeline[virtualItem.index + 1];
-                          setSelectedFramePath(next.frame);
-                          setSelectedFrame(next.frame);
-                          setSelectedProcessor(next.processor.id);
-                        }
-                        if (e.key === "ArrowUp" && virtualItem.index > 0) {
-                          const prev = frameTimeline[virtualItem.index - 1];
-                          setSelectedFramePath(prev.frame);
-                          setSelectedFrame(prev.frame);
-                          setSelectedProcessor(prev.processor.id);
-                        }
                       }}
                     />
                   </div>

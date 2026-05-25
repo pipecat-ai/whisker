@@ -4,20 +4,8 @@
 // SPDX-License-Identifier: BSD 2-Clause License
 //
 
-import { useState, useMemo } from "react";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Checkbox } from "./ui/checkbox";
-import { Label } from "./ui/label";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuCheckboxItem,
-} from "./ui/dropdown-menu";
-import { ScrollArea } from "./ui/scroll-area";
-import { Badge } from "./ui/badge";
-import { ChevronDown, ChevronUp, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Cpu, LucideIcon, Rocket } from "lucide-react";
+import { SearchableFilterDropdown } from "./SearchableFilterDropdown";
 
 type FrameFiltersProps = {
   availableTypes: string[];
@@ -31,7 +19,52 @@ type FrameFiltersProps = {
   onShowProcessChange: (show: boolean) => void;
   onShowUpstreamChange: (show: boolean) => void;
   onShowDownstreamChange: (show: boolean) => void;
+  visibleCount: number;
+  totalCount: number;
 };
+
+// Pill colors. ``push`` and ``process`` mirror the FrameItem backgrounds so
+// the pill matches the row tint at a glance. ``upstream`` / ``downstream``
+// don't have row backgrounds in the frame list; pick complementary hues that
+// stay distinct from push/process.
+const PILL_STYLES = {
+  push: { bg: "rgba(59,130,246,0.15)", fg: "hsl(220, 80%, 55%)" },
+  process: { bg: "rgba(16,185,129,0.15)", fg: "hsl(150, 60%, 40%)" },
+  upstream: { bg: "rgba(245, 158, 11, 0.15)", fg: "hsl(35, 80%, 50%)" },
+  downstream: { bg: "rgba(168, 85, 247, 0.15)", fg: "hsl(280, 60%, 55%)" },
+} as const;
+
+type PillKind = keyof typeof PILL_STYLES;
+
+function PillToggle({
+  label,
+  kind,
+  icon: Icon,
+  enabled,
+  onToggle,
+}: {
+  label: string;
+  kind: PillKind;
+  icon: LucideIcon;
+  enabled: boolean;
+  onToggle: () => void;
+}) {
+  const style = PILL_STYLES[kind];
+  return (
+    <button
+      onClick={onToggle}
+      className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium uppercase tracking-wide transition-opacity"
+      style={{
+        backgroundColor: style.bg,
+        color: style.fg,
+        opacity: enabled ? 1 : 0.3,
+      }}
+    >
+      <Icon size={10} />
+      {label}
+    </button>
+  );
+}
 
 export function FrameFilters({
   availableTypes,
@@ -45,224 +78,59 @@ export function FrameFilters({
   onShowProcessChange,
   onShowUpstreamChange,
   onShowDownstreamChange,
+  visibleCount,
+  totalCount,
 }: FrameFiltersProps) {
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [typeSearch, setTypeSearch] = useState("");
-
-  const filteredTypes = useMemo(() => {
-    if (!typeSearch) return availableTypes;
-    const q = typeSearch.toLowerCase();
-    return availableTypes.filter((t) => t.toLowerCase().includes(q));
-  }, [availableTypes, typeSearch]);
-
-  const allFilteredSelected = useMemo(() => {
-    return (
-      filteredTypes.length > 0 &&
-      filteredTypes.every((type) => selectedTypes.has(type))
-    );
-  }, [filteredTypes, selectedTypes]);
-
-  const hasSelectedTypes = selectedTypes.size > 0;
-  const hasFilteredTypes = filteredTypes.length > 0;
-  const showSelectAll = hasFilteredTypes && !allFilteredSelected;
-  const showClearAll = hasSelectedTypes;
-
-  const toggleType = (type: string) => {
+  const toggleType = (t: string) => {
     const next = new Set(selectedTypes);
-    if (next.has(type)) {
-      next.delete(type);
-    } else {
-      next.add(type);
-    }
+    if (next.has(t)) next.delete(t);
+    else next.add(t);
     onTypesChange(next);
   };
 
-  const selectAll = () => {
-    onTypesChange(new Set(filteredTypes));
-  };
-
-  const clearAll = () => {
-    onTypesChange(new Set());
-  };
+  const clearAll = () => onTypesChange(new Set());
 
   return (
-    <div className="flex flex-col gap-2 flex-shrink-0">
-      <div className="flex items-center gap-2 flex-wrap">
-        <DropdownMenu
-          open={isFilterOpen}
-          onOpenChange={setIsFilterOpen}
-          modal={false}
-        >
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="outline"
-              className="grow md:min-w-80 justify-between"
-            >
-              <span>
-                {selectedTypes.size === 0
-                  ? "All frames"
-                  : `${selectedTypes.size} frame type${
-                      selectedTypes.size > 1 ? "s" : ""
-                    } selected`}
-              </span>
-              {isFilterOpen ? (
-                <ChevronUp className="h-4 w-4" />
-              ) : (
-                <ChevronDown className="h-4 w-4" />
-              )}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)]">
-            {(showSelectAll || showClearAll) && (
-              <div className="flex gap-2 p-2 border-b border-border">
-                {showSelectAll && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className={showClearAll ? "flex-1" : "w-full"}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      selectAll();
-                    }}
-                  >
-                    Select All
-                  </Button>
-                )}
-                {showClearAll && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className={showSelectAll ? "flex-1" : "w-full"}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      clearAll();
-                    }}
-                  >
-                    Clear
-                  </Button>
-                )}
-              </div>
-            )}
-            <div className="p-2 border-b border-border">
-              <Input
-                placeholder="Search frames..."
-                value={typeSearch}
-                onChange={(e) => setTypeSearch(e.target.value)}
-                onKeyDown={(e) => e.stopPropagation()}
-                className="h-8"
-              />
-            </div>
-            <ScrollArea className="h-[200px]">
-              {filteredTypes.length === 0 ? (
-                <div className="p-3 text-sm text-muted-foreground text-center">
-                  No frames available
-                </div>
-              ) : (
-                filteredTypes.map((type) => (
-                  <DropdownMenuCheckboxItem
-                    key={type}
-                    checked={selectedTypes.has(type)}
-                    onCheckedChange={() => toggleType(type)}
-                    onSelect={(e) => e.preventDefault()}
-                  >
-                    {type}
-                  </DropdownMenuCheckboxItem>
-                ))
-              )}
-            </ScrollArea>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <div className="flex gap-2 flex-wrap">
-          <div className="flex gap-2 px-3 py-2 border rounded-md">
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="show-push"
-                checked={showPush}
-                onCheckedChange={(checked) =>
-                  onShowPushChange(checked === true)
-                }
-              />
-              <Label
-                htmlFor="show-push"
-                className="text-xs cursor-pointer uppercase"
-              >
-                Push
-              </Label>
-            </div>
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="show-process"
-                checked={showProcess}
-                onCheckedChange={(checked) =>
-                  onShowProcessChange(checked === true)
-                }
-              />
-              <Label
-                htmlFor="show-process"
-                className="text-xs cursor-pointer uppercase"
-              >
-                Process
-              </Label>
-            </div>
-          </div>
-          <div className="flex gap-2 px-3 py-2 border rounded-md">
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="show-upstream"
-                checked={showUpstream}
-                onCheckedChange={(checked) =>
-                  onShowUpstreamChange(checked === true)
-                }
-              />
-              <Label
-                htmlFor="show-upstream"
-                className="text-xs cursor-pointer uppercase"
-              >
-                Upstream
-              </Label>
-            </div>
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="show-downstream"
-                checked={showDownstream}
-                onCheckedChange={(checked) =>
-                  onShowDownstreamChange(checked === true)
-                }
-              />
-              <Label
-                htmlFor="show-downstream"
-                className="text-xs cursor-pointer uppercase"
-              >
-                Downstream
-              </Label>
-            </div>
-          </div>
-        </div>
-      </div>
-      {selectedTypes.size > 0 && (
-        <div className="flex gap-2 flex-wrap items-center">
-          {Array.from(selectedTypes).map((type) => (
-            <Badge
-              key={type}
-              variant="outline"
-              className="cursor-pointer hover:bg-secondary/80 transition-colors pr-1"
-              onClick={() => toggleType(type)}
-            >
-              <span className="mr-1">{type}</span>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleType(type);
-                }}
-                className="ml-1 rounded-full hover:bg-background/30 p-0.5 transition-colors"
-                aria-label={`Remove ${type} filter`}
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </Badge>
-          ))}
-        </div>
-      )}
+    <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
+      <PillToggle
+        label="Push"
+        kind="push"
+        icon={Rocket}
+        enabled={showPush}
+        onToggle={() => onShowPushChange(!showPush)}
+      />
+      <PillToggle
+        label="Process"
+        kind="process"
+        icon={Cpu}
+        enabled={showProcess}
+        onToggle={() => onShowProcessChange(!showProcess)}
+      />
+      <PillToggle
+        label="Upstream"
+        kind="upstream"
+        icon={ArrowUp}
+        enabled={showUpstream}
+        onToggle={() => onShowUpstreamChange(!showUpstream)}
+      />
+      <PillToggle
+        label="Downstream"
+        kind="downstream"
+        icon={ArrowDown}
+        enabled={showDownstream}
+        onToggle={() => onShowDownstreamChange(!showDownstream)}
+      />
+      <SearchableFilterDropdown
+        label="All frames"
+        placeholder="Search frames..."
+        availableItems={availableTypes}
+        selectedItems={selectedTypes}
+        onToggle={toggleType}
+        onClear={clearAll}
+      />
+      <span className="text-[11px] text-muted-foreground font-normal">
+        {visibleCount} out of {totalCount}
+      </span>
     </div>
   );
 }

@@ -8,6 +8,7 @@ import { useMemo, useRef } from "react";
 import { format } from "date-fns";
 import { FrameMessage } from "../types";
 import { useWhisker } from "../hooks.useWhisker";
+import { useStore } from "../state.store";
 import { cn } from "@/lib/utils";
 import { ArrowUp, ArrowDown, ChevronRight, Cpu, Rocket } from "lucide-react";
 
@@ -19,30 +20,33 @@ type FrameItemProps = {
 
 export function FrameItem({ frame, isSelected, onClick }: FrameItemProps) {
   const ref = useRef<HTMLDivElement | null>(null);
+  const keyboardFocus = useStore((s) => s.keyboardFocus);
 
   const { frameBackground } = useWhisker();
 
   const time = useMemo(
-    () => format(new Date(frame.timestamp), "HH:mm:ss"),
+    // Server emits time.time() (seconds since epoch); Date expects ms.
+    () => format(new Date(frame.timestamp * 1000), "HH:mm:ss.SSS"),
     [frame.timestamp]
   );
 
   return (
     <div
       ref={ref}
+      tabIndex={0}
+      onClick={onClick}
       className={cn(
-        "px-2 py-1.5 border rounded-lg bg-background hover:outline hover:outline-2 hover:outline-primary",
+        "px-2 py-1.5 border rounded-lg bg-background hover:outline hover:outline-2 hover:outline-primary cursor-pointer focus:outline-none focus-visible:outline-none",
         "flex flex-col",
-        {
-          "border-2 border-foreground": isSelected,
-        }
+        isSelected && "border-2",
+        isSelected &&
+          (keyboardFocus === "frames"
+            ? "border-foreground"
+            : "border-foreground/30")
       )}
       style={{ background: frameBackground(frame) }}
     >
-      <div
-        className="flex items-center gap-1.5 cursor-pointer"
-        onClick={onClick}
-      >
+      <div className="flex items-center gap-1.5">
         <div className="flex items-center gap-2 w-12 md:w-28 flex-shrink-0">
           {frame.direction === "upstream" ? (
             <ArrowUp className="h-4 w-4" />

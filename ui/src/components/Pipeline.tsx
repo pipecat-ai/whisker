@@ -8,7 +8,12 @@ import CytoscapeComponent from "react-cytoscapejs";
 import cytoscape from "cytoscape";
 import dagre from "cytoscape-dagre";
 import { useEffect, useMemo, useRef } from "react";
-import { useStore } from "../state.store";
+import {
+  EMPTY_CONNECTIONS,
+  EMPTY_FRAMES,
+  EMPTY_PROCESSORS,
+  useStore,
+} from "../state.store";
 
 // Dagre layout options - extending BaseLayoutOptions with dagre-specific options
 interface DagreLayoutOptions extends cytoscape.BaseLayoutOptions {
@@ -39,17 +44,39 @@ const layoutOptions: DagreLayoutOptions = {
 
 cytoscape.use(dagre);
 
-export function Pipeline() {
+type PipelineProps = {
+  /** Worker whose pipeline to render. Falls back to the active worker. */
+  workerId?: string;
+};
+
+export function Pipeline({ workerId }: PipelineProps = {}) {
   const theme = useStore((s) => s.theme);
-  const processors = useStore((s) => s.processors);
-  const connections = useStore((s) => s.connections);
+  const activeWorkerId = useStore((s) => s.activeWorkerId);
+  const targetId = workerId ?? activeWorkerId;
+
+  const processors = useStore((s) =>
+    targetId && s.workers[targetId]
+      ? s.workers[targetId].processors
+      : EMPTY_PROCESSORS
+  );
+  const connections = useStore((s) =>
+    targetId && s.workers[targetId]
+      ? s.workers[targetId].topology.connections
+      : EMPTY_CONNECTIONS
+  );
+  const frames = useStore((s) =>
+    targetId && s.workers[targetId]
+      ? s.workers[targetId].frames
+      : EMPTY_FRAMES
+  );
+
   const selectedProcessor = useStore((s) => s.selectedProcessor);
   const setSelectedProcessor = useStore((s) => s.setSelectedProcessorById);
   const setSelectedFrame = useStore((s) => s.setSelectedFrame);
   const setSelectedFramePath = useStore((s) => s.setSelectedFramePath);
-  const frames = useStore((s) => s.frames);
 
   const cyRef = useRef<cytoscape.Core | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   const elements = useMemo(() => {
     const ps = Object.values(processors).map((p) => ({
@@ -74,6 +101,36 @@ export function Pipeline() {
       }
     }
   }, [selectedProcessor]);
+
+  // Re-layout when the target worker changes — cytoscape diffs node/edge
+  // sets but won't run dagre again on its own, so the new topology would
+  // render on top of the previous worker's positions.
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+    // Reset traffic-flash bookkeeping; the next worker's frame counts are
+    // unrelated to the previous worker's.
+    frameCountsRef.current = {};
+    flashingRef.current.clear();
+    const layout = cy.layout(layoutOptions);
+    layout.run();
+  }, [targetId]);
+
+  // Watch the wrapping div for size changes (e.g. user dragging the
+  // PipelineGraphDialog's resize handle) and tell cytoscape to recompute
+  // its viewport + re-fit the graph.
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => {
+      const cy = cyRef.current;
+      if (!cy) return;
+      cy.resize();
+      cy.fit();
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   // Flash processors that get traffic
   const FLASH_DURATION_MS = 150;
@@ -143,31 +200,33 @@ export function Pipeline() {
   ];
 
   return (
-    <CytoscapeComponent
-      cy={(cy) => {
-        cyRef.current = cy;
-        cy.on("tap", "node", (evt) => {
-          setSelectedProcessor(evt.target.id());
-          setSelectedFrame(undefined);
-          setSelectedFramePath(undefined);
-        });
-        cy.on("tap", (evt) => {
-          if (evt.target === cy) {
-            setSelectedProcessor(undefined);
+    <div ref={containerRef} className="w-full h-full">
+      <CytoscapeComponent
+        cy={(cy) => {
+          cyRef.current = cy;
+          cy.on("tap", "node", (evt) => {
+            setSelectedProcessor(evt.target.id());
             setSelectedFrame(undefined);
             setSelectedFramePath(undefined);
-          }
-        });
-        const layout = cy.layout(layoutOptions);
-        layout.run();
-      }}
-      elements={elements}
-      style={{ width: "100%", height: "100%" }}
-      stylesheet={stylesheet}
-      autoungrabify
-      userPanningEnabled
-      minZoom={0.5}
-      maxZoom={1.5}
-    />
+          });
+          cy.on("tap", (evt) => {
+            if (evt.target === cy) {
+              setSelectedProcessor(undefined);
+              setSelectedFrame(undefined);
+              setSelectedFramePath(undefined);
+            }
+          });
+          const layout = cy.layout(layoutOptions);
+          layout.run();
+        }}
+        elements={elements}
+        style={{ width: "100%", height: "100%" }}
+        stylesheet={stylesheet}
+        autoungrabify
+        userPanningEnabled
+        minZoom={0.5}
+        maxZoom={1.5}
+      />
+    </div>
   );
 }

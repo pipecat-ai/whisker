@@ -8,6 +8,7 @@ import React, { useEffect, useMemo } from "react";
 import { format } from "date-fns";
 import { FrameMessage, Processor } from "../types";
 import { useWhisker } from "../hooks.useWhisker";
+import { useStore } from "../state.store";
 import { cn } from "@/lib/utils";
 import { ArrowUp, ArrowDown, Cpu, Rocket } from "lucide-react";
 
@@ -37,9 +38,11 @@ export const FramePathItem = React.forwardRef<
   }, [isSelected, ref]);
 
   const { frameBackground } = useWhisker();
+  const keyboardFocus = useStore((s) => s.keyboardFocus);
 
   const time = useMemo(
-    () => format(new Date(frame.timestamp), "HH:mm:ss"),
+    // Server emits time.time() (seconds since epoch); Date expects ms.
+    () => format(new Date(frame.timestamp * 1000), "HH:mm:ss.SSS"),
     [frame.timestamp]
   );
 
@@ -48,11 +51,13 @@ export const FramePathItem = React.forwardRef<
       ref={ref}
       data-key={`path-${frame.id}-${idx}`}
       className={cn(
-        "px-2 py-1.5 border rounded-lg bg-background hover:outline hover:outline-2 hover:outline-primary cursor-default select-none",
+        "px-2 py-1.5 border rounded-lg bg-background hover:outline hover:outline-2 hover:outline-primary cursor-default select-none focus:outline-none focus-visible:outline-none",
         "flex flex-col",
-        {
-          "border-2 border-foreground": isSelected,
-        }
+        isSelected && "border-2",
+        isSelected &&
+          (keyboardFocus === "path"
+            ? "border-foreground"
+            : "border-foreground/30")
       )}
       tabIndex={0} // makes it keyboard focusable
       style={{ background: frameBackground(frame) }}
