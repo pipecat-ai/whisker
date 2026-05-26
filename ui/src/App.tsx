@@ -52,7 +52,7 @@ export default function App() {
           </CardHeader>
           <CardContent className="flex-1 min-h-0 overflow-hidden p-0">
             <Group orientation="vertical" className="h-full">
-              <Panel defaultSize={40} minSize={15}>
+              <Panel defaultSize={35} minSize={15}>
                 <WorkerTree />
               </Panel>
               <Separator className={VERTICAL_HANDLE_CLASS}>
@@ -73,7 +73,7 @@ export default function App() {
               <Separator className={VERTICAL_HANDLE_CLASS}>
                 <div className={VERTICAL_HANDLE_GRIP_CLASS} />
               </Separator>
-              <Panel defaultSize={25} minSize={15}>
+              <Panel defaultSize={30} minSize={15}>
                 <DetailsPanel />
               </Panel>
             </Group>
