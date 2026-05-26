@@ -87,7 +87,12 @@ export function DetailsPanel() {
     activeWorkerId ? s.workers[activeWorkerId] : undefined
   );
   const selectedProcessor = useStore((s) => s.selectedProcessor);
-  const selectedJob = useStore((s) => s.selectedJob);
+  // ``store.selectedJob`` is a point-in-time snapshot captured when the
+  // user clicked the row. Read the live entry from ``store.jobs`` so the
+  // duration / status keep up as ``BusJob*`` updates flow in.
+  const selectedJob = useStore((s) =>
+    s.selectedJob ? (s.jobs[s.selectedJob.job_id] ?? s.selectedJob) : undefined
+  );
   const framesLen = useStore((s) => {
     if (!worker || !selectedProcessor) return 0;
     return worker.frames[selectedProcessor.id]?.length ?? 0;
