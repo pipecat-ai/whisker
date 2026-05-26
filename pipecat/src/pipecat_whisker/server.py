@@ -180,7 +180,15 @@ class WhiskerServer(WhiskerSink):
 
     async def _server_task_handler(self) -> None:
         """Run the WebSocket server until the task is cancelled."""
-        async with serve(self._client_handler, self._host, self._port):
+        # ``ping_interval=None`` disables websockets' keepalive ping. The
+        # default 20s/20s window is too tight for a debugger whose UI is
+        # often a background browser tab — the tab gets throttled, misses
+        # a pong, and the server tears the connection down with 1011.
+        # We don't need keepalive for a localhost dev tool: a truly dead
+        # client will surface on the next ``client.send``.
+        async with serve(
+            self._client_handler, self._host, self._port, ping_interval=None
+        ):
             logger.debug(f"ᓚᘏᗢ Whisker running at ws://{self._host}:{self._port}")
             # Wait forever; ``cancel_task`` propagates a CancelledError
             # that exits the ``async with`` and closes the server.
