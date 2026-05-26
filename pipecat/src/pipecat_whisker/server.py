@@ -119,8 +119,7 @@ class WhiskerServer(WhiskerSink):
         bus-events ring buffer at connect time.
         """
         encoded = msgpack.packb(event)
-        if self._file is not None:
-            await self._file.write(encoded)
+        await self._write_to_file(encoded)
         event_type = event.get("type", "")
         # Frames always go into the live batch (it doubles as the
         # disconnect→reconnect replay). Everything else only enqueues
@@ -129,6 +128,24 @@ class WhiskerServer(WhiskerSink):
             await self._queue_data(event["timestamp"], encoded)
         elif self._client is not None:
             await self._queue_data(event["timestamp"], encoded)
+
+    async def _write_to_file(self, data: bytes) -> None:
+        """Append ``data`` to the recording file, tolerant of shutdown races.
+
+        Capture the handle locally so a concurrent ``stop()`` can clear
+        ``self._file`` without us reading a half-torn-down attribute. If
+        the file ends up closed between the check and the write (other
+        workers' observer tasks can still emit while we're shutting
+        down), swallow the error rather than letting it bubble up
+        through the observer proxy task.
+        """
+        f = self._file
+        if f is None:
+            return
+        try:
+            await f.write(data)
+        except (ValueError, RuntimeError):
+            pass
 
     # ---- BaseWorker lifecycle ---------------------------------------------
 

@@ -95,6 +95,18 @@ class WhiskerFile(WhiskerSink):
         await super().stop()
 
     async def emit(self, event: dict) -> None:
-        """Append the event to the file."""
-        if self._file is not None:
-            await self._file.write(msgpack.packb(event))
+        """Append the event to the file.
+
+        Capture the file handle locally and swallow ``ValueError`` /
+        ``RuntimeError`` raised by writes that race with :meth:`stop` —
+        observer tasks owned by other workers can still fire events at
+        us while shutdown unwinds, and we'd rather drop the trailing
+        bytes than crash the proxy task with "write to closed file".
+        """
+        f = self._file
+        if f is None:
+            return
+        try:
+            await f.write(msgpack.packb(event))
+        except (ValueError, RuntimeError):
+            pass
