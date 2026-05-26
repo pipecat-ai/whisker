@@ -91,7 +91,11 @@ export function BusEventItem({ event }: Props) {
         )}
       </button>
       {expanded && hasData && (
-        <pre className="px-3 py-2 ml-[100px] text-[11px] text-muted-foreground overflow-x-auto whitespace-pre-wrap break-all">
+        <pre
+          // Payload is text to read / select — keep the cursor as a
+          // caret here even though the row above is a click target.
+          className="px-3 py-2 ml-[100px] text-[11px] text-muted-foreground overflow-x-auto whitespace-pre-wrap break-all cursor-text select-text"
+        >
           {JSON.stringify(event.data, null, 2)}
         </pre>
       )}
