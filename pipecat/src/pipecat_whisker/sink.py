@@ -107,6 +107,8 @@ PROTOCOL_VERSION = "1"
 
 DEFAULT_EXCLUDE_FRAMES: Tuple[Type[Frame], ...] = (
     InputAudioRawFrame,
+    OutputAudioRawFrame,
+    UserSpeakingFrame,
     BotSpeakingFrame,
 )
 
