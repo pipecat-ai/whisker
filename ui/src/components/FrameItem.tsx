@@ -80,7 +80,13 @@ export function FrameItem({ frame, isSelected, onClick }: FrameItemProps) {
         </span>
       </div>
       {isSelected && (
-        <div className="text-muted-foreground text-xs whitespace-pre-wrap select-text mt-2">
+        <div
+          // Payload is text to read / select, not a click target —
+          // override the row's ``cursor-pointer`` so the cursor reverts
+          // to the default text caret when hovering the JSON.
+          className="text-muted-foreground text-xs whitespace-pre-wrap select-text cursor-text mt-2"
+          onClick={(e) => e.stopPropagation()}
+        >
           <div className="pt-2 whitespace-pre-wrap">
             {JSON.stringify(frame.payload, null, 2)}
           </div>

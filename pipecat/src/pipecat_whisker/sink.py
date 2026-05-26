@@ -414,6 +414,21 @@ class WhiskerSink(BaseWorker):
             await super().on_bus_message(message)
             return
 
+        # Auto-observe pipeline workers spawned dynamically as children
+        # of other workers. ``BusAddWorkerMessage`` carries the worker
+        # reference, so we can wire an observer in without the user
+        # having to call ``sink.create_observer`` for each new sub-worker.
+        if isinstance(message, BusAddWorkerMessage):
+            worker = getattr(message, "worker", None)
+            if (
+                worker is not None
+                and worker is not self
+                and isinstance(worker, PipelineWorker)
+                and worker.name not in self._observed
+            ):
+                observer = self.create_observer(worker)
+                worker.add_observer(observer)
+
         event = self._build_bus_event(message)
         self._bus_events.append(event)
         await self.emit(event)
