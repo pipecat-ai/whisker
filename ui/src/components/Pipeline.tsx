@@ -117,31 +117,47 @@ export function Pipeline({ workerId }: PipelineProps = {}) {
   }, [targetId]);
 
   // Watch the wrapping div for size changes (e.g. user dragging the
-  // PipelineGraphDialog's resize handle) and tell cytoscape to recompute
-  // its viewport. Two important details:
-  //   1. We *don't* call ``cy.fit()`` here — re-fitting on every resize
-  //      tick continuously shifts where each node lives relative to the
-  //      cursor, which feels like the cursor is drifting away from
-  //      whatever you're trying to click while you drag the handle.
-  //   2. ``cy.resize()`` is deferred to the next animation frame so it
-  //      reads the post-layout bounding rect rather than a half-applied
-  //      one — without the rAF gate the renderer's cached container
-  //      rect lags one frame behind the DOM during the resize, and
-  //      pointer events hit the wrong screen→model position.
+  // PipelineGraphDialog's resize handle) and force cytoscape to drop its
+  // cached pointer-coordinate mapping.
+  //
+  // Cytoscape *already* attaches its own ResizeObserver to ``r.container``
+  // and debounces ``cy.resize()`` at 100 ms — but during the debounce
+  // window the renderer's cached ``containerBB`` is still pointing at
+  // the pre-resize bounding rect, and any pointer event that lands while
+  // the cache is stale reads the wrong screen→model coordinates and
+  // drifts. We piggyback on the same DOM signal and:
+  //   * defer to a settle window so the debounced ``cy.resize()`` has
+  //     definitely run (browser-debounce + a margin),
+  //   * then nuke the renderer's container-coords cache via the
+  //     ``invalidateContainerClientCoordsCache`` hook so the *next*
+  //     pointer event recomputes from a fresh ``getBoundingClientRect``,
+  //   * and avoid ``cy.fit()`` here so the user's pan/zoom survives.
   useEffect(() => {
     const el = containerRef.current;
     if (!el || typeof ResizeObserver === "undefined") return;
-    let pending = 0;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    const flush = () => {
+      timeoutId = null;
+      const cy = cyRef.current;
+      if (!cy) return;
+      cy.resize();
+      // ``renderer()`` and ``invalidateContainerClientCoordsCache`` are
+      // private API — they're how cytoscape itself drops the cache on
+      // ``resize`` notifications. Forcing it here guarantees the next
+      // pointer event reads a fresh bounding rect even if the debounced
+      // path was racing the DOM update.
+      const renderer = (
+        cy as unknown as { renderer?: () => { invalidateContainerClientCoordsCache?: () => void } }
+      ).renderer?.();
+      renderer?.invalidateContainerClientCoordsCache?.();
+    };
     const observer = new ResizeObserver(() => {
-      if (pending) return;
-      pending = requestAnimationFrame(() => {
-        pending = 0;
-        cyRef.current?.resize();
-      });
+      if (timeoutId !== null) clearTimeout(timeoutId);
+      timeoutId = setTimeout(flush, 150);
     });
     observer.observe(el);
     return () => {
-      if (pending) cancelAnimationFrame(pending);
+      if (timeoutId !== null) clearTimeout(timeoutId);
       observer.disconnect();
     };
   }, []);
