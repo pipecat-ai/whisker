@@ -254,22 +254,31 @@ class WhiskerServer(WhiskerSink):
         if not self._client or not self._batch:
             return
 
-        index = self._compute_batch_index()
-        if index == -1 and not flush:
+        send_count = self._compute_send_count()
+        if send_count == 0 and not flush:
             return
+        if send_count == 0:
+            send_count = len(self._batch)
 
-        send_index = len(self._batch) if index == -1 else index
-        message = b"".join(data for _, data in self._batch[:send_index])
+        message = b"".join(data for _, data in self._batch[:send_count])
+        if not message:
+            return
         await self._send(message)
-        self._batch = self._batch[send_index:]
+        self._batch = self._batch[send_count:]
 
-    def _compute_batch_index(self) -> int:
+    def _compute_send_count(self) -> int:
+        """Number of leading batch items to ship together.
+
+        Returns the count whose cumulative encoded size first reaches
+        ``self._batch_size`` (inclusive of the item that crossed the
+        threshold), or 0 if the batch is still under the limit.
+        """
         size = 0
         for i, (_, data) in enumerate(self._batch):
             size += len(data)
             if size >= self._batch_size:
-                return i
-        return -1
+                return i + 1
+        return 0
 
     async def _queue_data(
         self,
