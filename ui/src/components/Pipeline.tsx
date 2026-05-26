@@ -118,18 +118,32 @@ export function Pipeline({ workerId }: PipelineProps = {}) {
 
   // Watch the wrapping div for size changes (e.g. user dragging the
   // PipelineGraphDialog's resize handle) and tell cytoscape to recompute
-  // its viewport + re-fit the graph.
+  // its viewport. Two important details:
+  //   1. We *don't* call ``cy.fit()`` here — re-fitting on every resize
+  //      tick continuously shifts where each node lives relative to the
+  //      cursor, which feels like the cursor is drifting away from
+  //      whatever you're trying to click while you drag the handle.
+  //   2. ``cy.resize()`` is deferred to the next animation frame so it
+  //      reads the post-layout bounding rect rather than a half-applied
+  //      one — without the rAF gate the renderer's cached container
+  //      rect lags one frame behind the DOM during the resize, and
+  //      pointer events hit the wrong screen→model position.
   useEffect(() => {
     const el = containerRef.current;
     if (!el || typeof ResizeObserver === "undefined") return;
+    let pending = 0;
     const observer = new ResizeObserver(() => {
-      const cy = cyRef.current;
-      if (!cy) return;
-      cy.resize();
-      cy.fit();
+      if (pending) return;
+      pending = requestAnimationFrame(() => {
+        pending = 0;
+        cyRef.current?.resize();
+      });
     });
     observer.observe(el);
-    return () => observer.disconnect();
+    return () => {
+      if (pending) cancelAnimationFrame(pending);
+      observer.disconnect();
+    };
   }, []);
 
   // Flash processors that get traffic
