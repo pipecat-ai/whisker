@@ -93,10 +93,10 @@ export function DetailsPanel() {
   const selectedJob = useStore((s) =>
     s.selectedJob ? (s.jobs[s.selectedJob.job_id] ?? s.selectedJob) : undefined
   );
-  const framesLen = useStore((s) => {
-    if (!worker || !selectedProcessor) return 0;
-    return worker.frames[selectedProcessor.id]?.length ?? 0;
-  });
+  const framesLen =
+    worker && selectedProcessor
+      ? (worker.frames[selectedProcessor.id]?.length ?? 0)
+      : 0;
 
   const proc =
     selectedProcessor && worker?.processors[selectedProcessor.id]
