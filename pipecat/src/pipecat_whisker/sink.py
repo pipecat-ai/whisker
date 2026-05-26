@@ -227,7 +227,6 @@ class _ObservedWorker:
 # Maps a lifecycle :class:`BusMessage` type to the wire ``worker_status``
 # value and the attribute that names the worker the event refers to.
 _WORKER_STATUS_BY_MESSAGE: Tuple[Tuple[type, str, str], ...] = (
-    (BusAddWorkerMessage, "added", "source"),
     (BusWorkerReadyMessage, "ready", "source"),
     (BusActivateWorkerMessage, "active", "target"),
     (BusDeactivateWorkerMessage, "inactive", "target"),
@@ -413,21 +412,6 @@ class WhiskerSink(BaseWorker):
         ):
             await super().on_bus_message(message)
             return
-
-        # Auto-observe pipeline workers spawned dynamically as children
-        # of other workers. ``BusAddWorkerMessage`` carries the worker
-        # reference, so we can wire an observer in without the user
-        # having to call ``sink.create_observer`` for each new sub-worker.
-        if isinstance(message, BusAddWorkerMessage):
-            worker = getattr(message, "worker", None)
-            if (
-                worker is not None
-                and worker is not self
-                and isinstance(worker, PipelineWorker)
-                and worker.name not in self._observed
-            ):
-                observer = self.create_observer(worker)
-                worker.add_observer(observer)
 
         event = self._build_bus_event(message)
         self._bus_events.append(event)
