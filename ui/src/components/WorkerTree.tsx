@@ -163,13 +163,12 @@ function RunnerSection({
           <Icon
             size={12}
             className={
-              local ? "shrink-0 text-foreground" : "shrink-0 text-muted-foreground"
+              local
+                ? "shrink-0 text-foreground"
+                : "shrink-0 text-muted-foreground"
             }
           />
-          <span
-            className="font-mono text-xs truncate"
-            title={runnerName}
-          >
+          <span className="font-mono text-xs truncate" title={runnerName}>
             {runnerName}
           </span>
           <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
@@ -185,7 +184,6 @@ function RunnerSection({
               workerId={id}
               depth={1}
               workersByParent={workersByParent}
-              remote={!local}
             />
           ))}
         </div>
@@ -213,7 +211,6 @@ function UnassignedSection({
             workerId={id}
             depth={1}
             workersByParent={workersByParent}
-            remote={false}
           />
         </Fragment>
       ))}

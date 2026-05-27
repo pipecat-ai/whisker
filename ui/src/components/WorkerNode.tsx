@@ -5,7 +5,7 @@
 //
 
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Globe, Workflow } from "lucide-react";
+import { ChevronDown, ChevronRight, Cog, Workflow } from "lucide-react";
 import { useStore } from "../state.store";
 import { cn } from "@/lib/utils";
 
@@ -15,22 +15,9 @@ type Props = {
   workerId: string;
   depth: number;
   workersByParent: WorkersByParent;
-  /**
-   * Whether the worker belongs to a remote runner. Drives the icon and
-   * muted styling. Workers on a local runner — even ones without an
-   * observer (e.g. the WhiskerSink itself, which is a BaseWorker, not a
-   * PipelineWorker, so it never gets a ``worker_added``) — render as
-   * a regular Workflow node.
-   */
-  remote: boolean;
 };
 
-export function WorkerNode({
-  workerId,
-  depth,
-  workersByParent,
-  remote,
-}: Props) {
+export function WorkerNode({ workerId, depth, workersByParent }: Props) {
   const worker = useStore((s) => s.workers[workerId]);
   const activeWorkerId = useStore((s) => s.activeWorkerId);
   const setActiveWorker = useStore((s) => s.setActiveWorker);
@@ -44,7 +31,12 @@ export function WorkerNode({
   const hasChildWorkers = childWorkerIds.length > 0;
   const isActive = workerId === activeWorkerId;
   const Chevron = expanded ? ChevronDown : ChevronRight;
-  const Icon = remote ? Globe : Workflow;
+  // Icon answers "does this worker have a pipeline?" Workflow = yes (we
+  // have an observer + topology), Cog = no (a BaseWorker like the
+  // WhiskerSink, or a remote worker we have no observer for). Local vs
+  // remote is conveyed by the parent runner row's House / Globe icon.
+  const pipelineKnown = worker.observed;
+  const Icon = pipelineKnown ? Workflow : Cog;
 
   // Tightened from ``12 + depth * 16`` once the runner header took over
   // the top-level row — the previous spacing made first-level workers
@@ -80,11 +72,12 @@ export function WorkerNode({
           onClick={() => setActiveWorker(workerId)}
           className={cn(
             "flex-1 flex items-center gap-2 px-1.5 py-1.5 text-left min-w-0 focus:outline-none focus-visible:outline-none",
-            // Remote workers (no local observer) read as muted; the
-            // pipeline / frames / frame-path panes can't show anything
-            // useful for them, but you can still select to see their
-            // identity and runner in the Details pane.
-            remote && "text-muted-foreground"
+            // Workers without a known pipeline read as muted — the
+            // Pipeline / Frames / Frame-path panes can't show anything
+            // useful for them, but Details still surfaces id / runner /
+            // status. Applies uniformly to local BaseWorkers (e.g. the
+            // WhiskerSink) and to remote workers.
+            !pipelineKnown && "text-muted-foreground"
           )}
         >
           <Icon size={12} className="shrink-0 text-muted-foreground" />
@@ -107,7 +100,6 @@ export function WorkerNode({
             workerId={id}
             depth={childDepth}
             workersByParent={workersByParent}
-            remote={remote}
           />
         ))}
     </div>
