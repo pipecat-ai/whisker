@@ -32,7 +32,6 @@ from loguru import logger
 from pipecat.frames.frames import Frame
 
 from pipecat_whisker.sink import (
-    BUS_MESSAGE_BUFFER_SIZE,
     DEFAULT_EXCLUDE_BUS_FRAMES,
     WhiskerSerializer,
     WhiskerSink,
@@ -54,7 +53,6 @@ class WhiskerFile(WhiskerSink):
         name: str = "whisker-file",
         serializer: Optional[WhiskerSerializer] = None,
         exclude_bus_frames: Tuple[Type[Frame], ...] = DEFAULT_EXCLUDE_BUS_FRAMES,
-        bus_message_buffer_size: int = BUS_MESSAGE_BUFFER_SIZE,
     ):
         """Initialize the file sink.
 
@@ -64,14 +62,11 @@ class WhiskerFile(WhiskerSink):
             serializer: Optional frame serializer override.
             exclude_bus_frames: Frame types to skip when reporting
                 ``BusFrameMessage``s.
-            bus_message_buffer_size: Maximum number of recent bus
-                messages to retain in the in-memory ring buffer.
         """
         super().__init__(
             name=name,
             serializer=serializer,
             exclude_bus_frames=exclude_bus_frames,
-            bus_message_buffer_size=bus_message_buffer_size,
         )
         self._file_name = file_name
         self._file = None

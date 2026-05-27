@@ -43,12 +43,7 @@ export type WorkerDescriptor = {
   worker_id: string;
   added_at: number;
   topology: Topology;
-  status?: string;
   parent?: string | null;
-  runner?: string | null;
-  started_at?: number | null;
-  bridged?: boolean | null;
-  active?: boolean | null;
 };
 
 export type SnapshotMessage = {
@@ -65,29 +60,13 @@ export type WorkerAddedMessage = {
   worker_id: string;
   added_at: number;
   topology: Topology;
-  status?: string;
   parent?: string | null;
-  runner?: string | null;
-  started_at?: number | null;
-  bridged?: boolean | null;
-  active?: boolean | null;
 };
 
 export type WorkerRemovedMessage = {
   type: "worker_removed";
   timestamp: number;
   worker_id: string;
-};
-
-export type WorkerStatusMessage = {
-  type: "worker_status";
-  timestamp: number;
-  worker_id: string;
-  status: string;
-  runner?: string | null;
-  started_at?: number | null;
-  bridged?: boolean | null;
-  active?: boolean | null;
 };
 
 export type BusMessageCategory = "frame" | "job" | "lifecycle" | "other";
@@ -106,7 +85,6 @@ export type ServerMessage =
   | SnapshotMessage
   | WorkerAddedMessage
   | WorkerRemovedMessage
-  | WorkerStatusMessage
   | FrameMessage
   | BusMessage;
 

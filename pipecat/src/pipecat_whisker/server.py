@@ -36,7 +36,6 @@ from pipecat.frames.frames import Frame
 from websockets import ConnectionClosedOK, serve
 
 from pipecat_whisker.sink import (
-    BUS_MESSAGE_BUFFER_SIZE,
     DEFAULT_EXCLUDE_BUS_FRAMES,
     WhiskerSerializer,
     WhiskerSink,
@@ -49,8 +48,11 @@ class WhiskerServer(WhiskerSink):
     """WebSocket server sink for the Whisker debugger.
 
     Hosts the WS port, multiplexes events from every observer created
-    via :meth:`create_observer`, and accumulates a per-session "batch"
-    so a client that connects mid-session sees the recent history.
+    via :meth:`create_observer`, and buffers events that arrive before
+    the first client connects so that client sees the pre-connect
+    activity. Once the first client has been served, subsequent
+    disconnect/reconnect cycles behave like Chrome devtools: a
+    late-joining client only sees what happens *after* it connects.
     Optionally also records every event to a file when ``file_name`` is
     provided.
     """
@@ -65,7 +67,6 @@ class WhiskerServer(WhiskerSink):
         file_name: Optional[str] = None,
         serializer: Optional[WhiskerSerializer] = None,
         exclude_bus_frames: Tuple[Type[Frame], ...] = DEFAULT_EXCLUDE_BUS_FRAMES,
-        bus_message_buffer_size: int = BUS_MESSAGE_BUFFER_SIZE,
     ):
         """Initialize the WhiskerServer.
 
@@ -81,15 +82,11 @@ class WhiskerServer(WhiskerSink):
             serializer: Optional frame serializer override.
             exclude_bus_frames: Frame types to skip when reporting
                 ``BusFrameMessage``s.
-            bus_message_buffer_size: Maximum number of recent bus
-                messages to retain server-side for replay to newly
-                connected clients.
         """
         super().__init__(
             name=name,
             serializer=serializer,
             exclude_bus_frames=exclude_bus_frames,
-            bus_message_buffer_size=bus_message_buffer_size,
         )
         self._host = host
         self._port = port
@@ -98,10 +95,16 @@ class WhiskerServer(WhiskerSink):
 
         # Asyncio state — allocated lazily in start().
         self._client = None
-        # Each batch entry is (timestamp_seconds, encoded_message_bytes).
-        # The timestamp drives the merged replay sent to a newly
-        # connected client; for steady-state sends it is unused.
+        # Live send-batch entries are ``(timestamp_seconds,
+        # encoded_message_bytes)``; populated only while a client is
+        # connected and drained by ``_send_task_handler``.
         self._batch: List[Tuple[float, bytes]] = []
+        # Pre-first-client buffer: every event we encode goes here until
+        # the first client has been served, at which point we drain it
+        # and never use it again. Late-joining clients get only the
+        # snapshot and live events from then on.
+        self._pre_connect_buffer: List[bytes] = []
+        self._first_client_served = False
         self._send_queue: Optional[asyncio.Queue] = None
         self._send_task_handle: Optional[asyncio.Task] = None
         self._server_task_handle: Optional[asyncio.Task] = None
@@ -110,24 +113,25 @@ class WhiskerServer(WhiskerSink):
     # ---- WhiskerSink hook --------------------------------------------------
 
     async def emit(self, event: dict) -> None:
-        """Encode the event, persist it (if recording), and broadcast.
+        """Encode the event, persist it (if recording), and deliver it.
 
-        Frames are always queued — the batch is the replay buffer for a
-        future client. ``worker_added`` / ``worker_status`` /
-        ``bus_message`` are only queued while a client is currently
-        connected; new clients pick them up from the snapshot and the
-        bus-message ring buffer at connect time.
+        Three cases:
+
+        1. A client is connected → queue for the live send loop.
+        2. No client yet *and* the first client hasn't been served →
+           append to the pre-connect buffer so that first client sees
+           the pre-connect history when it finally arrives.
+        3. The first client has already been served and there is no
+           client now → drop the event on the wire (still recorded to
+           the file if ``file_name`` was set).
         """
         encoded = msgpack.packb(event)
         await self._write_to_file(encoded)
-        event_type = event.get("type", "")
-        # Frames always go into the live batch (it doubles as the
-        # disconnect→reconnect replay). Everything else only enqueues
-        # when a client is currently connected.
-        if event_type.startswith("frame"):
+
+        if self._client is not None:
             await self._queue_data(event["timestamp"], encoded)
-        elif self._client is not None:
-            await self._queue_data(event["timestamp"], encoded)
+        elif not self._first_client_served:
+            self._pre_connect_buffer.append(encoded)
 
     async def _write_to_file(self, data: bytes) -> None:
         """Append ``data`` to the recording file, tolerant of shutdown races.
@@ -203,13 +207,14 @@ class WhiskerServer(WhiskerSink):
             # topology before any historical or live events arrive.
             await client.send(msgpack.packb(self.build_snapshot()))
 
-            # Drain accumulated frames + the bus message ring buffer,
-            # merged by timestamp, so the UI timeline renders coherently
-            # from first paint. After this point we hand the client over
-            # to the live send loop.
-            backlog = self._collect_backlog()
-            if backlog is not None:
-                await client.send(backlog)
+            # Drain the pre-connect buffer on the first client only, so
+            # the first watcher sees what happened before they arrived;
+            # late-joining clients (after this one) get only live events.
+            if not self._first_client_served:
+                if self._pre_connect_buffer:
+                    await client.send(b"".join(self._pre_connect_buffer))
+                self._pre_connect_buffer = []
+                self._first_client_served = True
 
             self._client = client
             async for _ in client:
@@ -221,17 +226,6 @@ class WhiskerServer(WhiskerSink):
         finally:
             logger.debug("ᓚᘏᗢ Whisker: client disconnected")
             self._client = None
-
-    def _collect_backlog(self) -> Optional[bytes]:
-        """Drain ``_batch`` and the bus message ring buffer, merged by timestamp."""
-        items: List[Tuple[float, bytes]] = list(self._batch)
-        self._batch = []
-        for event in self._bus_messages:
-            items.append((event["timestamp"], msgpack.packb(event)))
-        if not items:
-            return None
-        items.sort(key=lambda x: x[0])
-        return b"".join(data for _, data in items)
 
     async def _close_client(self) -> None:
         if self._client:

@@ -18,7 +18,6 @@ import {
   WorkerAddedMessage,
   WorkerDescriptor,
   WorkerRemovedMessage,
-  WorkerStatusMessage,
 } from "./types";
 
 type Theme = "light" | "dark";
@@ -64,12 +63,7 @@ function workerFromDescriptor(desc: WorkerDescriptor): Worker {
     processors,
     frames: {},
     framePaths: {},
-    status: desc.status,
     parent: desc.parent ?? null,
-    runner: desc.runner ?? null,
-    started_at: desc.started_at ?? null,
-    bridged: desc.bridged ?? null,
-    active: desc.active ?? null,
   };
 }
 
@@ -119,7 +113,6 @@ type State = {
   applySnapshot: (m: SnapshotMessage) => void;
   addWorker: (m: WorkerAddedMessage) => void;
   removeWorker: (m: WorkerRemovedMessage) => void;
-  setWorkerStatus: (m: WorkerStatusMessage) => void;
   pushFrames: (frames: FrameMessage[]) => void;
   pushBusMessages: (events: BusMessage[]) => void;
 
@@ -199,12 +192,7 @@ export const useStore = create<State>((set, get) => ({
         worker_id: m.worker_id,
         added_at: m.added_at,
         topology: m.topology,
-        status: m.status,
         parent: m.parent,
-        runner: m.runner,
-        started_at: m.started_at,
-        bridged: m.bridged,
-        active: m.active,
       });
       return {
         workers: { ...s.workers, [m.worker_id]: w },
@@ -229,25 +217,6 @@ export const useStore = create<State>((set, get) => ({
         selectedFrame: becameActiveless ? undefined : s.selectedFrame,
         selectedFramePath: becameActiveless ? undefined : s.selectedFramePath,
       };
-    });
-  },
-
-  setWorkerStatus: (m) => {
-    set((s) => {
-      const w = s.workers[m.worker_id];
-      if (!w) return s;
-      // ``worker_status`` may carry metadata captured from
-      // ``BusWorkerReadyMessage`` — propagate any provided fields.
-      const updated: Worker = { ...w, status: m.status };
-      if (m.runner !== undefined && m.runner !== null)
-        updated.runner = m.runner;
-      if (m.started_at !== undefined && m.started_at !== null)
-        updated.started_at = m.started_at;
-      if (m.bridged !== undefined && m.bridged !== null)
-        updated.bridged = m.bridged;
-      if (m.active !== undefined && m.active !== null)
-        updated.active = m.active;
-      return { workers: { ...s.workers, [m.worker_id]: updated } };
     });
   },
 
@@ -285,6 +254,57 @@ export const useStore = create<State>((set, get) => ({
         merged.length > MAX_BUS_MESSAGES
           ? merged.slice(merged.length - MAX_BUS_MESSAGES)
           : merged;
+
+      // Derive worker status from lifecycle bus messages. The server
+      // doesn't push a separate ``worker_status`` event anymore — when
+      // we can read the same information off the bus, we do.
+      //
+      // ``BusWorkerReadyMessage`` also rides along ``runner`` /
+      // ``started_at`` / ``bridged`` / ``active`` in its ``data`` payload;
+      // copy those over too so the Worker details pane has them.
+      let workers = s.workers;
+      let workersChanged = false;
+      const updateWorker = (
+        id: string,
+        patch: Partial<Worker>
+      ) => {
+        const existing = workers[id];
+        if (!existing) return;
+        if (!workersChanged) {
+          workers = { ...workers };
+          workersChanged = true;
+        }
+        workers[id] = { ...existing, ...patch };
+      };
+      for (const e of events) {
+        const mt = e.message_type;
+        const data = (e.data ?? {}) as Record<string, unknown>;
+        const source = e.source_worker ?? null;
+        const target = e.target_worker ?? null;
+        if (mt === "BusWorkerReadyMessage" && source) {
+          const patch: Partial<Worker> = { status: "ready" };
+          if (typeof data.runner === "string") patch.runner = data.runner;
+          if (typeof data.started_at === "number")
+            patch.started_at = data.started_at;
+          if (typeof data.bridged === "boolean") patch.bridged = data.bridged;
+          if (typeof data.active === "boolean") patch.active = data.active;
+          updateWorker(source, patch);
+        } else if (mt === "BusActivateWorkerMessage" && target) {
+          updateWorker(target, { status: "active" });
+        } else if (mt === "BusDeactivateWorkerMessage" && target) {
+          updateWorker(target, { status: "inactive" });
+        } else if (mt === "BusEndWorkerMessage" && target) {
+          updateWorker(target, { status: "ended" });
+        } else if (mt === "BusCancelWorkerMessage" && target) {
+          updateWorker(target, { status: "cancelled" });
+        } else if (
+          (mt === "BusWorkerErrorMessage" ||
+            mt === "BusWorkerLocalErrorMessage") &&
+          source
+        ) {
+          updateWorker(source, { status: "errored" });
+        }
+      }
 
       // Replay BusJob* messages to keep the derived ``jobs`` map current.
       // Any BusJob* with a job_id seeds (or updates) the entry — the
@@ -393,9 +413,10 @@ export const useStore = create<State>((set, get) => ({
         }
       }
 
-      return jobsChanged
-        ? { busMessages: trimmed, jobs }
-        : { busMessages: trimmed };
+      const patch: Partial<State> = { busMessages: trimmed };
+      if (jobsChanged) patch.jobs = jobs;
+      if (workersChanged) patch.workers = workers;
+      return patch;
     });
   },
 

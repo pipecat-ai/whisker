@@ -12,7 +12,6 @@ export function useWhisker() {
   const applySnapshot = useStore((s) => s.applySnapshot);
   const addWorker = useStore((s) => s.addWorker);
   const removeWorker = useStore((s) => s.removeWorker);
-  const setWorkerStatus = useStore((s) => s.setWorkerStatus);
   const pushFrames = useStore((s) => s.pushFrames);
   const pushBusMessages = useStore((s) => s.pushBusMessages);
 
@@ -45,9 +44,6 @@ export function useWhisker() {
             break;
           case "worker_removed":
             removeWorker(msg);
-            break;
-          case "worker_status":
-            setWorkerStatus(msg);
             break;
           case "bus_message":
             busBatch.push(msg);

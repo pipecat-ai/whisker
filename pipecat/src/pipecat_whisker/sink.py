@@ -36,14 +36,12 @@ import platform
 import sys
 import time
 from abc import abstractmethod
-from collections import deque
 from dataclasses import dataclass, field, fields, is_dataclass
 from importlib.metadata import version
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    Deque,
     Dict,
     List,
     Optional,
@@ -120,8 +118,6 @@ DEFAULT_EXCLUDE_BUS_FRAMES: Tuple[Type[Frame], ...] = (
     UserSpeakingFrame,
     BotSpeakingFrame,
 )
-
-BUS_MESSAGE_BUFFER_SIZE = 200
 
 _LIFECYCLE_BUS_MESSAGES: Tuple[type, ...] = (
     BusActivateWorkerMessage,
@@ -217,47 +213,14 @@ class _ObservedWorker:
     pipeline: BasePipeline
     parent: Optional[str] = None
     added_at: float = field(default_factory=time.time)
-    status: Optional[str] = None
-    # Filled in opportunistically when a ``BusWorkerReadyMessage`` for this
-    # worker arrives on the bus.
-    runner: Optional[str] = None
-    started_at: Optional[float] = None
-    bridged: Optional[bool] = None
-    active: Optional[bool] = None
-
-
-# Maps a lifecycle :class:`BusMessage` type to the wire ``worker_status``
-# value and the attribute that names the worker the event refers to.
-_WORKER_STATUS_BY_MESSAGE: Tuple[Tuple[type, str, str], ...] = (
-    (BusWorkerReadyMessage, "ready", "source"),
-    (BusActivateWorkerMessage, "active", "target"),
-    (BusDeactivateWorkerMessage, "inactive", "target"),
-    (BusEndWorkerMessage, "ended", "target"),
-    (BusCancelWorkerMessage, "cancelled", "target"),
-    (BusWorkerErrorMessage, "errored", "source"),
-    (BusWorkerLocalErrorMessage, "errored", "source"),
-)
-
-
-def _worker_status_from_message(
-    message: BusMessage,
-) -> Optional[Tuple[str, str]]:
-    """Return ``(worker_name, status)`` for lifecycle messages, else ``None``."""
-    for cls, status, attr in _WORKER_STATUS_BY_MESSAGE:
-        if isinstance(message, cls):
-            name = getattr(message, attr, None)
-            if isinstance(name, str):
-                return name, status
-            return None
-    return None
 
 
 class WhiskerSink(BaseWorker):
     """Abstract base for whisker debugger backends.
 
-    Owns the per-worker observer registry, bus message ring buffer, and
-    worker lifecycle capture. Subclasses implement :meth:`emit` to
-    deliver each recorded event to their target.
+    Owns the per-worker observer registry and worker capture. Subclasses
+    implement :meth:`emit` to deliver each recorded event to their
+    target.
 
     Subclasses can:
 
@@ -275,7 +238,6 @@ class WhiskerSink(BaseWorker):
         *,
         serializer: Optional[WhiskerSerializer] = None,
         exclude_bus_frames: Tuple[Type[Frame], ...] = DEFAULT_EXCLUDE_BUS_FRAMES,
-        bus_message_buffer_size: int = BUS_MESSAGE_BUFFER_SIZE,
     ):
         """Initialize the sink.
 
@@ -285,8 +247,6 @@ class WhiskerSink(BaseWorker):
             exclude_bus_frames: Frame types to skip when reporting
                 ``BusFrameMessage``s — applied only to the frame inside
                 the bus message, not to non-frame bus messages.
-            bus_message_buffer_size: Maximum number of recent bus
-                messages to retain in the in-memory ring buffer.
         """
         super().__init__(name=name)
         self._serializer: WhiskerSerializer = serializer or whisker_serializer
@@ -294,11 +254,6 @@ class WhiskerSink(BaseWorker):
 
         # Registered observers, keyed by worker name.
         self._observed: Dict[str, _ObservedWorker] = {}
-
-        # Ring buffer of recent bus messages; subclasses can read it (for
-        # example to replay state to a freshly-connected websocket
-        # client).
-        self._bus_messages: Deque[dict] = deque(maxlen=bus_message_buffer_size)
 
         # Monotonic frame counter included in every frame event so
         # downstream consumers can dedupe / order.
@@ -323,8 +278,8 @@ class WhiskerSink(BaseWorker):
         Implementations are responsible for any wire encoding. The
         ``event`` dict carries its own ``"timestamp"`` and ``"type"``
         fields; valid types are ``snapshot``, ``worker_added``,
-        ``worker_status``, ``worker_removed``, ``bus_message``, and any
-        of ``frame`` / ``frame:whisker`` / ``frame:whisker-urgent``.
+        ``worker_removed``, ``bus_message``, and any of ``frame`` /
+        ``frame:whisker`` / ``frame:whisker-urgent``.
 
         Args:
             event: The wire dict to deliver.
@@ -414,7 +369,7 @@ class WhiskerSink(BaseWorker):
     # ---- Bus capture -------------------------------------------------------
 
     async def on_bus_message(self, message: BusMessage) -> None:
-        """Capture every bus message, buffer it, and emit it.
+        """Capture every bus message and emit it as a ``bus_message`` event.
 
         Overrides :meth:`BaseWorker.on_bus_message` to see *all* messages —
         the base implementation early-returns for ``BusFrameMessage`` and
@@ -427,11 +382,7 @@ class WhiskerSink(BaseWorker):
             await super().on_bus_message(message)
             return
 
-        event = self._build_bus_message_event(message)
-        self._bus_messages.append(event)
-        await self.emit(event)
-
-        await self._maybe_emit_worker_status(message)
+        await self.emit(self._build_bus_message_event(message))
         await super().on_bus_message(message)
 
     # ---- Snapshot / event builders ----------------------------------------
@@ -524,16 +475,6 @@ class WhiskerSink(BaseWorker):
         }
         if entry.parent is not None:
             descriptor["parent"] = entry.parent
-        if entry.status is not None:
-            descriptor["status"] = entry.status
-        if entry.runner is not None:
-            descriptor["runner"] = entry.runner
-        if entry.started_at is not None:
-            descriptor["started_at"] = entry.started_at
-        if entry.bridged is not None:
-            descriptor["bridged"] = entry.bridged
-        if entry.active is not None:
-            descriptor["active"] = entry.active
         return descriptor
 
     # ---- Event emitters ---------------------------------------------------
@@ -545,27 +486,6 @@ class WhiskerSink(BaseWorker):
             "timestamp": ts,
             **self._worker_descriptor(entry),
         }
-        await self.emit(msg)
-
-    async def _emit_worker_status(self, worker_name: str, status: str) -> None:
-        ts = time.time()
-        msg: dict = {
-            "type": "worker_status",
-            "timestamp": ts,
-            "worker_id": worker_name,
-            "status": status,
-        }
-        entry = self._observed.get(worker_name)
-        if entry is not None:
-            # Ride-along metadata captured from BusWorkerReadyMessage.
-            if entry.runner is not None:
-                msg["runner"] = entry.runner
-            if entry.started_at is not None:
-                msg["started_at"] = entry.started_at
-            if entry.bridged is not None:
-                msg["bridged"] = entry.bridged
-            if entry.active is not None:
-                msg["active"] = entry.active
         await self.emit(msg)
 
     def _frame_type(self, frame: Frame) -> str:
@@ -598,28 +518,3 @@ class WhiskerSink(BaseWorker):
             "payload": self._serializer(frame),
         }
         await self.emit(msg)
-
-    async def _maybe_emit_worker_status(self, message: BusMessage) -> None:
-        """Translate a lifecycle bus message into a ``worker_status`` event."""
-        if not self._sink_started:
-            return
-        result = _worker_status_from_message(message)
-        if result is None:
-            return
-        worker_name, status = result
-        entry = self._observed.get(worker_name)
-        if entry is None:
-            return
-
-        metadata_changed = False
-        if isinstance(message, BusWorkerReadyMessage):
-            for attr in ("runner", "started_at", "bridged", "active"):
-                value = getattr(message, attr, None)
-                if value is not None and getattr(entry, attr) != value:
-                    setattr(entry, attr, value)
-                    metadata_changed = True
-
-        if entry.status == status and not metadata_changed:
-            return
-        entry.status = status
-        await self._emit_worker_status(worker_name, status)
