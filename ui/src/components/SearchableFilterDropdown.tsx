@@ -118,9 +118,7 @@ export function SearchableFilterDropdown({
                     <span
                       className={cn(
                         "w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0",
-                        checked
-                          ? "border-primary bg-primary"
-                          : "border-input"
+                        checked ? "border-primary bg-primary" : "border-input"
                       )}
                     >
                       {checked && (

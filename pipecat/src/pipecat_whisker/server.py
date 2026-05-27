@@ -186,9 +186,7 @@ class WhiskerServer(WhiskerSink):
         # a pong, and the server tears the connection down with 1011.
         # We don't need keepalive for a localhost dev tool: a truly dead
         # client will surface on the next ``client.send``.
-        async with serve(
-            self._client_handler, self._host, self._port, ping_interval=None
-        ):
+        async with serve(self._client_handler, self._host, self._port, ping_interval=None):
             logger.debug(f"ᓚᘏᗢ Whisker running at ws://{self._host}:{self._port}")
             # Wait forever; ``cancel_task`` propagates a CancelledError
             # that exits the ``async with`` and closes the server.

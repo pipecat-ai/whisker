@@ -65,9 +65,7 @@ export function Pipeline({ workerId }: PipelineProps = {}) {
       : EMPTY_CONNECTIONS
   );
   const frames = useStore((s) =>
-    targetId && s.workers[targetId]
-      ? s.workers[targetId].frames
-      : EMPTY_FRAMES
+    targetId && s.workers[targetId] ? s.workers[targetId].frames : EMPTY_FRAMES
   );
 
   const selectedProcessor = useStore((s) => s.selectedProcessor);
@@ -147,7 +145,11 @@ export function Pipeline({ workerId }: PipelineProps = {}) {
       // pointer event reads a fresh bounding rect even if the debounced
       // path was racing the DOM update.
       const renderer = (
-        cy as unknown as { renderer?: () => { invalidateContainerClientCoordsCache?: () => void } }
+        cy as unknown as {
+          renderer?: () => {
+            invalidateContainerClientCoordsCache?: () => void;
+          };
+        }
       ).renderer?.();
       renderer?.invalidateContainerClientCoordsCache?.();
     };

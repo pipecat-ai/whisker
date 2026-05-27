@@ -45,39 +45,39 @@ export default function App() {
           {/* LEFT COLUMN: Workers / Jobs / Details */}
           <Panel defaultSize={20} minSize={10}>
             <Card className="flex flex-col min-h-0 overflow-hidden h-full">
-          <CardHeader className="pb-2 flex-shrink-0 px-4 pt-4">
-            <CardTitle className="text-sm text-muted-foreground">
-              Workers {workerCount > 0 ? `(${workerCount})` : ""}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex-1 min-h-0 overflow-hidden p-0">
-            <Group orientation="vertical" className="h-full">
-              <Panel defaultSize={35} minSize={15}>
-                <WorkerTree />
-              </Panel>
-              <Separator className={VERTICAL_HANDLE_CLASS}>
-                <div className={VERTICAL_HANDLE_GRIP_CLASS} />
-              </Separator>
-              <Panel defaultSize={35} minSize={15}>
-                <div className="h-full border-t flex flex-col min-h-0">
-                  <div className="px-3 py-1.5 border-b flex-shrink-0">
-                    <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                      Jobs
-                    </span>
-                  </div>
-                  <div className="flex-1 min-h-0 overflow-hidden">
-                    <JobsPanel />
-                  </div>
-                </div>
-              </Panel>
-              <Separator className={VERTICAL_HANDLE_CLASS}>
-                <div className={VERTICAL_HANDLE_GRIP_CLASS} />
-              </Separator>
-              <Panel defaultSize={30} minSize={15}>
-                <DetailsPanel />
-              </Panel>
-            </Group>
-          </CardContent>
+              <CardHeader className="pb-2 flex-shrink-0 px-4 pt-4">
+                <CardTitle className="text-sm text-muted-foreground">
+                  Workers {workerCount > 0 ? `(${workerCount})` : ""}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex-1 min-h-0 overflow-hidden p-0">
+                <Group orientation="vertical" className="h-full">
+                  <Panel defaultSize={35} minSize={15}>
+                    <WorkerTree />
+                  </Panel>
+                  <Separator className={VERTICAL_HANDLE_CLASS}>
+                    <div className={VERTICAL_HANDLE_GRIP_CLASS} />
+                  </Separator>
+                  <Panel defaultSize={35} minSize={15}>
+                    <div className="h-full border-t flex flex-col min-h-0">
+                      <div className="px-3 py-1.5 border-b flex-shrink-0">
+                        <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                          Jobs
+                        </span>
+                      </div>
+                      <div className="flex-1 min-h-0 overflow-hidden">
+                        <JobsPanel />
+                      </div>
+                    </div>
+                  </Panel>
+                  <Separator className={VERTICAL_HANDLE_CLASS}>
+                    <div className={VERTICAL_HANDLE_GRIP_CLASS} />
+                  </Separator>
+                  <Panel defaultSize={30} minSize={15}>
+                    <DetailsPanel />
+                  </Panel>
+                </Group>
+              </CardContent>
             </Card>
           </Panel>
           <Separator className={HORIZONTAL_HANDLE_CLASS}>
@@ -86,74 +86,76 @@ export default function App() {
           <Panel defaultSize={80} minSize={40}>
             {/* RIGHT COLUMN: Bus messages on top, Pipeline | Frames | Frame path on bottom */}
             <div className="flex flex-col min-h-0 overflow-hidden h-full">
-          <Group orientation="vertical" className="flex-1 min-h-0">
-            <Panel defaultSize={40} minSize={15}>
-              <BusEvents />
-            </Panel>
-            <Separator className={VERTICAL_HANDLE_CLASS}>
-              <div className={VERTICAL_HANDLE_GRIP_CLASS} />
-            </Separator>
-            <Panel defaultSize={60} minSize={20}>
-              <Group orientation="horizontal" className="h-full">
-                <Panel defaultSize={22} minSize={10}>
-                  <Card className="flex flex-col min-h-0 overflow-hidden h-full">
-                    <CardHeader className="pb-2 flex-shrink-0 px-4 pt-4 flex flex-row items-center gap-2">
-                      <CardTitle className="text-sm text-muted-foreground truncate">
-                        Pipeline
-                      </CardTitle>
-                      {activeWorkerId && (
-                        <span className="font-mono text-[11px] text-muted-foreground truncate flex-1">
-                          {activeWorkerId}
-                        </span>
-                      )}
-                      {activeWorkerId && (
-                        <button
-                          onClick={() => setGraphOpen(true)}
-                          className="shrink-0 p-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent focus:outline-none focus-visible:outline-none"
-                          title="View pipeline graph"
-                          aria-label="View pipeline graph"
-                        >
-                          <Network size={14} />
-                        </button>
-                      )}
-                    </CardHeader>
-                    <CardContent className="flex-1 min-h-0 overflow-hidden p-0">
-                      <PipelinePanel />
-                    </CardContent>
-                  </Card>
-                  {activeWorkerId && (
-                    <PipelineGraphDialog
-                      workerId={activeWorkerId}
-                      open={graphOpen}
-                      onOpenChange={setGraphOpen}
-                    />
-                  )}
+              <Group orientation="vertical" className="flex-1 min-h-0">
+                <Panel defaultSize={40} minSize={15}>
+                  <BusEvents />
                 </Panel>
-                <Separator className={HORIZONTAL_HANDLE_CLASS}>
-                  <div className={HORIZONTAL_HANDLE_GRIP_CLASS} />
+                <Separator className={VERTICAL_HANDLE_CLASS}>
+                  <div className={VERTICAL_HANDLE_GRIP_CLASS} />
                 </Separator>
-                <Panel defaultSize={50} minSize={15}>
-                  <FrameInspector />
-                </Panel>
-                <Separator className={HORIZONTAL_HANDLE_CLASS}>
-                  <div className={HORIZONTAL_HANDLE_GRIP_CLASS} />
-                </Separator>
-                <Panel defaultSize={28} minSize={10}>
-                  <Card className="flex flex-col min-h-0 overflow-hidden h-full">
-                    <CardHeader className="pb-2 flex-shrink-0 px-4 pt-4">
-                      <CardTitle className="text-sm text-muted-foreground">
-                        Frame path{" "}
-                        {selectedFrame ? `(frame: ${selectedFrame.name})` : ""}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex-1 min-h-0 overflow-hidden p-2">
-                      <FramePath />
-                    </CardContent>
-                  </Card>
+                <Panel defaultSize={60} minSize={20}>
+                  <Group orientation="horizontal" className="h-full">
+                    <Panel defaultSize={22} minSize={10}>
+                      <Card className="flex flex-col min-h-0 overflow-hidden h-full">
+                        <CardHeader className="pb-2 flex-shrink-0 px-4 pt-4 flex flex-row items-center gap-2">
+                          <CardTitle className="text-sm text-muted-foreground truncate">
+                            Pipeline
+                          </CardTitle>
+                          {activeWorkerId && (
+                            <span className="font-mono text-[11px] text-muted-foreground truncate flex-1">
+                              {activeWorkerId}
+                            </span>
+                          )}
+                          {activeWorkerId && (
+                            <button
+                              onClick={() => setGraphOpen(true)}
+                              className="shrink-0 p-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent focus:outline-none focus-visible:outline-none"
+                              title="View pipeline graph"
+                              aria-label="View pipeline graph"
+                            >
+                              <Network size={14} />
+                            </button>
+                          )}
+                        </CardHeader>
+                        <CardContent className="flex-1 min-h-0 overflow-hidden p-0">
+                          <PipelinePanel />
+                        </CardContent>
+                      </Card>
+                      {activeWorkerId && (
+                        <PipelineGraphDialog
+                          workerId={activeWorkerId}
+                          open={graphOpen}
+                          onOpenChange={setGraphOpen}
+                        />
+                      )}
+                    </Panel>
+                    <Separator className={HORIZONTAL_HANDLE_CLASS}>
+                      <div className={HORIZONTAL_HANDLE_GRIP_CLASS} />
+                    </Separator>
+                    <Panel defaultSize={50} minSize={15}>
+                      <FrameInspector />
+                    </Panel>
+                    <Separator className={HORIZONTAL_HANDLE_CLASS}>
+                      <div className={HORIZONTAL_HANDLE_GRIP_CLASS} />
+                    </Separator>
+                    <Panel defaultSize={28} minSize={10}>
+                      <Card className="flex flex-col min-h-0 overflow-hidden h-full">
+                        <CardHeader className="pb-2 flex-shrink-0 px-4 pt-4">
+                          <CardTitle className="text-sm text-muted-foreground">
+                            Frame path{" "}
+                            {selectedFrame
+                              ? `(frame: ${selectedFrame.name})`
+                              : ""}
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="flex-1 min-h-0 overflow-hidden p-2">
+                          <FramePath />
+                        </CardContent>
+                      </Card>
+                    </Panel>
+                  </Group>
                 </Panel>
               </Group>
-            </Panel>
-          </Group>
               {versions && (
                 <div className="flex justify-end text-muted-foreground text-xs px-4 flex-shrink-0 mt-4">
                   <span className="text-right truncate">

@@ -56,8 +56,7 @@ export function JobsPanel() {
       : -1;
     if (idx < 0) {
       e.preventDefault();
-      const first =
-        e.key === "ArrowDown" ? jobs[0] : jobs[jobs.length - 1];
+      const first = e.key === "ArrowDown" ? jobs[0] : jobs[jobs.length - 1];
       setSelectedJob(first);
       return;
     }

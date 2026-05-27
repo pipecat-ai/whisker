@@ -156,41 +156,41 @@ export function BusEvents() {
               className="flex-1 min-h-0 overflow-auto"
               style={{ contain: "strict" }}
             >
-        {filtered.length === 0 ? (
-          <div className="text-muted-foreground text-xs p-2">
-            {busEvents.length === 0
-              ? "No bus messages yet."
-              : "No messages match the current filter."}
-          </div>
-        ) : (
-          <div
-            style={{
-              height: `${virtualizer.getTotalSize()}px`,
-              width: "100%",
-              position: "relative",
-            }}
-          >
-            {virtualizer.getVirtualItems().map((virtualItem) => {
-              const ev = filtered[virtualItem.index];
-              return (
+              {filtered.length === 0 ? (
+                <div className="text-muted-foreground text-xs p-2">
+                  {busEvents.length === 0
+                    ? "No bus messages yet."
+                    : "No messages match the current filter."}
+                </div>
+              ) : (
                 <div
-                  key={`bus-${ev.timestamp}-${virtualItem.index}`}
-                  ref={virtualizer.measureElement}
-                  data-index={virtualItem.index}
                   style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
+                    height: `${virtualizer.getTotalSize()}px`,
                     width: "100%",
-                    transform: `translateY(${virtualItem.start}px)`,
+                    position: "relative",
                   }}
                 >
-                  <BusEventItem event={ev} />
+                  {virtualizer.getVirtualItems().map((virtualItem) => {
+                    const ev = filtered[virtualItem.index];
+                    return (
+                      <div
+                        key={`bus-${ev.timestamp}-${virtualItem.index}`}
+                        ref={virtualizer.measureElement}
+                        data-index={virtualItem.index}
+                        style={{
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          width: "100%",
+                          transform: `translateY(${virtualItem.start}px)`,
+                        }}
+                      >
+                        <BusEventItem event={ev} />
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
-          </div>
-        )}
+              )}
             </div>
           </div>
         </div>

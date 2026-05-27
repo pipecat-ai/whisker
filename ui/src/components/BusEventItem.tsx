@@ -82,11 +82,7 @@ export function BusEventItem({ event }: Props) {
         </span>
         {hasData && (
           <span className="ml-auto shrink-0 text-muted-foreground">
-            {expanded ? (
-              <ChevronDown size={12} />
-            ) : (
-              <ChevronRight size={12} />
-            )}
+            {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
           </span>
         )}
       </button>

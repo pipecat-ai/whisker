@@ -139,55 +139,55 @@ export function FrameInspector() {
             onKeyDown={handleKeyDown}
             onFocus={() => setKeyboardFocus("frames")}
           >
-        <div
-          ref={parentRef}
-          className="flex-1 min-h-0 overflow-auto font-mono text-xs"
-          style={{ contain: "strict" }}
-        >
-          {sortedFrames.length === 0 ? (
-            <div className="text-muted-foreground text-xs p-2">
-              Select a processor.
-            </div>
-          ) : (
             <div
-              style={{
-                height: `${virtualizer.getTotalSize()}px`,
-                width: "100%",
-                position: "relative",
-              }}
+              ref={parentRef}
+              className="flex-1 min-h-0 overflow-auto font-mono text-xs"
+              style={{ contain: "strict" }}
             >
-              {virtualizer.getVirtualItems().map((virtualItem) => {
-                const f = sortedFrames[virtualItem.index];
-                const isSelected = selectedFrame?.id === f.id;
-                return (
-                  <div
-                    key={`frame-${f.id}-${virtualItem.index}`}
-                    ref={virtualizer.measureElement}
-                    data-index={virtualItem.index}
-                    style={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      width: "100%",
-                      paddingBottom: "6px", // Gap between items
-                      transform: `translateY(${virtualItem.start}px)`,
-                    }}
-                  >
-                    <FrameItem
-                      frame={f}
-                      isSelected={isSelected}
-                      onClick={() => {
-                        const wasSelected = isSelected;
-                        setSelectedFrame(wasSelected ? undefined : f);
-                        setSelectedFramePath(wasSelected ? undefined : f);
-                      }}
-                    />
-                  </div>
-                );
-              })}
+              {sortedFrames.length === 0 ? (
+                <div className="text-muted-foreground text-xs p-2">
+                  Select a processor.
+                </div>
+              ) : (
+                <div
+                  style={{
+                    height: `${virtualizer.getTotalSize()}px`,
+                    width: "100%",
+                    position: "relative",
+                  }}
+                >
+                  {virtualizer.getVirtualItems().map((virtualItem) => {
+                    const f = sortedFrames[virtualItem.index];
+                    const isSelected = selectedFrame?.id === f.id;
+                    return (
+                      <div
+                        key={`frame-${f.id}-${virtualItem.index}`}
+                        ref={virtualizer.measureElement}
+                        data-index={virtualItem.index}
+                        style={{
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                          width: "100%",
+                          paddingBottom: "6px", // Gap between items
+                          transform: `translateY(${virtualItem.start}px)`,
+                        }}
+                      >
+                        <FrameItem
+                          frame={f}
+                          isSelected={isSelected}
+                          onClick={() => {
+                            const wasSelected = isSelected;
+                            setSelectedFrame(wasSelected ? undefined : f);
+                            setSelectedFramePath(wasSelected ? undefined : f);
+                          }}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-          )}
-        </div>
           </div>
         </div>
       </CardContent>

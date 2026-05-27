@@ -239,12 +239,14 @@ export const useStore = create<State>((set, get) => ({
       // ``worker_status`` may carry metadata captured from
       // ``BusWorkerReadyMessage`` — propagate any provided fields.
       const updated: Worker = { ...w, status: m.status };
-      if (m.runner !== undefined && m.runner !== null) updated.runner = m.runner;
+      if (m.runner !== undefined && m.runner !== null)
+        updated.runner = m.runner;
       if (m.started_at !== undefined && m.started_at !== null)
         updated.started_at = m.started_at;
       if (m.bridged !== undefined && m.bridged !== null)
         updated.bridged = m.bridged;
-      if (m.active !== undefined && m.active !== null) updated.active = m.active;
+      if (m.active !== undefined && m.active !== null)
+        updated.active = m.active;
       return { workers: { ...s.workers, [m.worker_id]: updated } };
     });
   },

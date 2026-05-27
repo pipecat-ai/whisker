@@ -44,9 +44,7 @@ export function JobNode({ job, depth }: Props) {
         "group flex items-center mx-1 rounded-lg border-b border-border/60 last:border-b-0 hover:bg-accent/30 transition-colors",
         isSelected && "bg-accent/40 ring-2 ring-inset",
         isSelected &&
-          (keyboardFocus === "jobs"
-            ? "ring-foreground"
-            : "ring-foreground/30")
+          (keyboardFocus === "jobs" ? "ring-foreground" : "ring-foreground/30")
       )}
       style={depth > 0 ? { paddingLeft: `${depth * 16}px` } : undefined}
     >
@@ -60,10 +58,7 @@ export function JobNode({ job, depth }: Props) {
             shrinkable below their natural content width — without it
             ``truncate`` does nothing in a flex row. */}
         <div className="flex-1 min-w-0 flex items-center gap-2 overflow-hidden">
-          <span
-            className="font-mono truncate min-w-0"
-            title={job.job_id}
-          >
+          <span className="font-mono truncate min-w-0" title={job.job_id}>
             {label}
           </span>
           <span

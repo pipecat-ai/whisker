@@ -63,13 +63,7 @@ function JobDurationTicker({
   return <>{formatJobDuration(startedAt, completedAt)}</>;
 }
 
-function Row({
-  label,
-  value,
-}: {
-  label: string;
-  value: React.ReactNode;
-}) {
+function Row({ label, value }: { label: string; value: React.ReactNode }) {
   if (value === null || value === undefined || value === "") return null;
   return (
     <div className="flex items-baseline gap-3 py-1.5 border-b last:border-b-0">
@@ -134,140 +128,143 @@ export function DetailsPanel() {
           Select a worker, processor, or task.
         </div>
       ) : (
-      <div className="flex-1 min-h-0 overflow-auto px-3 py-1.5">
-        {selectedJob ? (
-          <>
-            <Row
-              label="ID"
-              value={
-                <span className="font-mono">{selectedJob.job_id}</span>
-              }
-            />
-            {selectedJob.job_name && (
+        <div className="flex-1 min-h-0 overflow-auto px-3 py-1.5">
+          {selectedJob ? (
+            <>
               <Row
-                label="Name"
-                value={<span className="font-mono">{selectedJob.job_name}</span>}
+                label="ID"
+                value={<span className="font-mono">{selectedJob.job_id}</span>}
               />
-            )}
-            <Row
-              label="Source"
-              value={<span className="font-mono">{selectedJob.source}</span>}
-            />
-            {selectedJob.targets.length > 0 && (
-              <Row
-                label="Targets"
-                value={
-                  <span className="font-mono">
-                    {selectedJob.targets.join(", ")}
-                  </span>
-                }
-              />
-            )}
-            <Row
-              label="Status"
-              value={
-                <span className="uppercase tracking-wide text-[10px] font-medium">
-                  {selectedJob.status}
-                </span>
-              }
-            />
-            <Row
-              label="Started"
-              value={formatTimestamp(selectedJob.started_at)}
-            />
-            {selectedJob.completed_at != null && (
-              <Row
-                label="Ended"
-                value={formatTimestamp(selectedJob.completed_at)}
-              />
-            )}
-            <Row
-              label="Duration"
-              value={
-                <JobDurationTicker
-                  startedAt={selectedJob.started_at}
-                  completedAt={selectedJob.completed_at}
+              {selectedJob.job_name && (
+                <Row
+                  label="Name"
+                  value={
+                    <span className="font-mono">{selectedJob.job_name}</span>
+                  }
                 />
-              }
-            />
-          </>
-        ) : proc && worker ? (
-          <>
-            <Row
-              label="Name"
-              value={<span className="font-mono">{proc.name}</span>}
-            />
-            <Row
-              label="Type"
-              value={<span className="font-mono">{proc.type}</span>}
-            />
-            {proc.parent && (
+              )}
               <Row
-                label="Parent"
-                value={<span className="font-mono">{proc.parent}</span>}
+                label="Source"
+                value={<span className="font-mono">{selectedJob.source}</span>}
               />
-            )}
-            <Row
-              label="Worker"
-              value={<span className="font-mono">{worker.worker_id}</span>}
-            />
-            <Row label="Frames" value={framesLen} />
-          </>
-        ) : worker ? (
-          <>
-            <Row
-              label="ID"
-              value={<span className="font-mono">{worker.worker_id}</span>}
-            />
-            {worker.runner && (
-              <Row
-                label="Runner"
-                value={<span className="font-mono">{worker.runner}</span>}
-              />
-            )}
-            {worker.parent && (
-              <Row
-                label="Parent"
-                value={<span className="font-mono">{worker.parent}</span>}
-              />
-            )}
-            {worker.status && (
+              {selectedJob.targets.length > 0 && (
+                <Row
+                  label="Targets"
+                  value={
+                    <span className="font-mono">
+                      {selectedJob.targets.join(", ")}
+                    </span>
+                  }
+                />
+              )}
               <Row
                 label="Status"
                 value={
                   <span className="uppercase tracking-wide text-[10px] font-medium">
-                    {worker.status}
+                    {selectedJob.status}
                   </span>
                 }
               />
-            )}
-            {flags.length > 0 && (
               <Row
-                label="Flags"
+                label="Started"
+                value={formatTimestamp(selectedJob.started_at)}
+              />
+              {selectedJob.completed_at != null && (
+                <Row
+                  label="Ended"
+                  value={formatTimestamp(selectedJob.completed_at)}
+                />
+              )}
+              <Row
+                label="Duration"
                 value={
-                  <span className="uppercase tracking-wide text-[10px] font-medium">
-                    {flags.join(" · ")}
-                  </span>
+                  <JobDurationTicker
+                    startedAt={selectedJob.started_at}
+                    completedAt={selectedJob.completed_at}
+                  />
                 }
               />
-            )}
-            <Row
-              label="Processors"
-              value={worker.topology.processors.length}
-            />
-            {worker.started_at != null && (
+            </>
+          ) : proc && worker ? (
+            <>
               <Row
-                label="Uptime"
-                value={<UptimeTicker startedAt={worker.started_at} />}
+                label="Name"
+                value={<span className="font-mono">{proc.name}</span>}
               />
-            )}
-            {worker.started_at != null && (
-              <Row label="Started" value={formatTimestamp(worker.started_at)} />
-            )}
-            <Row label="Added" value={formatTimestamp(worker.added_at)} />
-          </>
-        ) : null}
-      </div>
+              <Row
+                label="Type"
+                value={<span className="font-mono">{proc.type}</span>}
+              />
+              {proc.parent && (
+                <Row
+                  label="Parent"
+                  value={<span className="font-mono">{proc.parent}</span>}
+                />
+              )}
+              <Row
+                label="Worker"
+                value={<span className="font-mono">{worker.worker_id}</span>}
+              />
+              <Row label="Frames" value={framesLen} />
+            </>
+          ) : worker ? (
+            <>
+              <Row
+                label="ID"
+                value={<span className="font-mono">{worker.worker_id}</span>}
+              />
+              {worker.runner && (
+                <Row
+                  label="Runner"
+                  value={<span className="font-mono">{worker.runner}</span>}
+                />
+              )}
+              {worker.parent && (
+                <Row
+                  label="Parent"
+                  value={<span className="font-mono">{worker.parent}</span>}
+                />
+              )}
+              {worker.status && (
+                <Row
+                  label="Status"
+                  value={
+                    <span className="uppercase tracking-wide text-[10px] font-medium">
+                      {worker.status}
+                    </span>
+                  }
+                />
+              )}
+              {flags.length > 0 && (
+                <Row
+                  label="Flags"
+                  value={
+                    <span className="uppercase tracking-wide text-[10px] font-medium">
+                      {flags.join(" · ")}
+                    </span>
+                  }
+                />
+              )}
+              <Row
+                label="Processors"
+                value={worker.topology.processors.length}
+              />
+              {worker.started_at != null && (
+                <Row
+                  label="Uptime"
+                  value={<UptimeTicker startedAt={worker.started_at} />}
+                />
+              )}
+              {worker.started_at != null && (
+                <Row
+                  label="Started"
+                  value={formatTimestamp(worker.started_at)}
+                />
+              )}
+              <Row label="Added" value={formatTimestamp(worker.added_at)} />
+            </>
+          ) : null}
+        </div>
       )}
     </div>
   );
