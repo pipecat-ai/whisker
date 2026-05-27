@@ -5,7 +5,7 @@
 //
 
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Workflow } from "lucide-react";
+import { ChevronDown, ChevronRight, Globe, Workflow } from "lucide-react";
 import { useStore } from "../state.store";
 import { cn } from "@/lib/utils";
 
@@ -31,12 +31,18 @@ export function WorkerNode({ workerId, depth, workersByParent }: Props) {
   const hasChildWorkers = childWorkerIds.length > 0;
   const isActive = workerId === activeWorkerId;
   const Chevron = expanded ? ChevronDown : ChevronRight;
+  // Remote workers (those we only know about through
+  // ``BusWorkerRegistryMessage``) render muted and aren't clickable —
+  // we don't have an observer so the pipeline / frames / frame-path
+  // panes have nothing to show.
+  const remote = !worker.observed;
+  const Icon = remote ? Globe : Workflow;
 
   const headerPad = 12 + depth * 16;
   const childDepth = depth + 1;
 
   return (
-    <div className={depth === 0 ? "border-b last:border-b-0" : ""}>
+    <div>
       <div
         className={cn(
           "group flex items-center mx-1 rounded-lg hover:bg-accent/30 transition-colors",
@@ -61,9 +67,16 @@ export function WorkerNode({ workerId, depth, workersByParent }: Props) {
         )}
         <button
           onClick={() => setActiveWorker(workerId)}
-          className="flex-1 flex items-center gap-2 px-1.5 py-1.5 text-left min-w-0 focus:outline-none focus-visible:outline-none"
+          className={cn(
+            "flex-1 flex items-center gap-2 px-1.5 py-1.5 text-left min-w-0 focus:outline-none focus-visible:outline-none",
+            // Remote workers (no local observer) read as muted; the
+            // pipeline / frames / frame-path panes can't show anything
+            // useful for them, but you can still select to see their
+            // identity and runner in the Details pane.
+            remote && "text-muted-foreground"
+          )}
         >
-          <Workflow size={12} className="shrink-0 text-muted-foreground" />
+          <Icon size={12} className="shrink-0 text-muted-foreground" />
           <span className="font-mono text-xs truncate" title={worker.worker_id}>
             {worker.worker_id}
           </span>

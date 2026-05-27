@@ -81,6 +81,17 @@ export type ServerMessage =
   | FrameMessage
   | BusMessage;
 
+// Runner lifecycle derived client-side from BusWorkerRegistryMessage /
+// BusWorkerReadyMessage. A runner is "local" if at least one of its
+// workers has a topology descriptor from a ``worker_added`` we received
+// (we own the observer); otherwise we only know about it via the bus
+// and it's "remote".
+export type Runner = {
+  name: string;
+  worker_ids: string[];
+  local: boolean;
+};
+
 // Job lifecycle derived client-side by replaying the BusJob* bus events.
 export type JobStatus =
   | "running"

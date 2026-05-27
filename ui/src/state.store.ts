@@ -12,6 +12,7 @@ import {
   Job,
   JobStatus,
   Processor,
+  Runner,
   SnapshotMessage,
   Topology,
   Versions,
@@ -28,6 +29,11 @@ export type Worker = {
   processors: Record<string, Processor>;
   frames: Record<string, FrameMessage[]>;
   framePaths: Record<string, Processor[]>;
+  // True when we have an observer for this worker (i.e. a ``worker_added``
+  // brought us a topology descriptor). False for workers we only know
+  // about through ``BusWorkerRegistryMessage`` — those are on a remote
+  // runner and we can't expand their pipeline / frames / frame-path.
+  observed: boolean;
   status?: string;
   parent?: string | null;
   runner?: string | null;
@@ -52,6 +58,11 @@ const EMPTY_FRAME_PATHS: Record<string, Processor[]> = Object.freeze(
   {}
 ) as Record<string, Processor[]>;
 
+const EMPTY_TOPOLOGY: Topology = Object.freeze({
+  processors: [],
+  connections: [],
+}) as Topology;
+
 function workerFromDescriptor(desc: WorkerDescriptor): Worker {
   const processors: Record<string, Processor> = {};
   for (const p of desc.topology.processors) processors[p.id] = p;
@@ -62,7 +73,31 @@ function workerFromDescriptor(desc: WorkerDescriptor): Worker {
     processors,
     frames: {},
     framePaths: {},
+    observed: true,
     parent: desc.parent ?? null,
+  };
+}
+
+// Stub for a worker we only learned about through
+// ``BusWorkerRegistryMessage`` — no observer, no topology, not
+// expandable. Status / metadata may fill in as lifecycle bus messages
+// flow in.
+function placeholderWorker(
+  worker_id: string,
+  ts: number,
+  parent: string | null,
+  runner: string
+): Worker {
+  return {
+    worker_id,
+    added_at: ts,
+    topology: EMPTY_TOPOLOGY,
+    processors: {},
+    frames: {},
+    framePaths: {},
+    observed: false,
+    parent,
+    runner,
   };
 }
 
@@ -80,6 +115,10 @@ type State = {
   workers: Record<string, Worker>;
   workerOrder: string[];
   activeWorkerId?: string;
+
+  // Runners observed via the bus. Top-level grouping in the worker tree.
+  runners: Record<string, Runner>;
+  runnerOrder: string[];
 
   versions?: Versions;
   protocol?: string;
@@ -143,6 +182,8 @@ export const useStore = create<State>((set, get) => ({
   workers: {},
   workerOrder: [],
   activeWorkerId: undefined,
+  runners: {},
+  runnerOrder: [],
 
   versions: undefined,
   protocol: undefined,
@@ -173,6 +214,9 @@ export const useStore = create<State>((set, get) => ({
       workers,
       workerOrder,
       activeWorkerId: workerOrder[0],
+      // Runners come from the bus; the snapshot only carries topology.
+      runners: {},
+      runnerOrder: [],
       versions: m.server,
       protocol: m.protocol,
       busMessages: [],
@@ -185,15 +229,35 @@ export const useStore = create<State>((set, get) => ({
 
   addWorker: (m) => {
     set((s) => {
-      if (s.workers[m.worker_id]) return s;
-      const w = workerFromDescriptor({
+      const fresh = workerFromDescriptor({
         worker_id: m.worker_id,
         added_at: m.added_at,
         topology: m.topology,
         parent: m.parent,
       });
+      const existing = s.workers[m.worker_id];
+      if (existing) {
+        // Already known — typical case: we'd seen the worker through a
+        // ``BusWorkerRegistryMessage`` placeholder before its
+        // ``worker_added`` arrived. Upgrade to a real observer entry,
+        // preserving any status / runner / metadata already derived from
+        // bus messages.
+        return {
+          workers: {
+            ...s.workers,
+            [m.worker_id]: {
+              ...fresh,
+              status: existing.status,
+              runner: existing.runner,
+              started_at: existing.started_at,
+              bridged: existing.bridged,
+              active: existing.active,
+            },
+          },
+        };
+      }
       return {
-        workers: { ...s.workers, [m.worker_id]: w },
+        workers: { ...s.workers, [m.worker_id]: fresh },
         workerOrder: [...s.workerOrder, m.worker_id],
         activeWorkerId: s.activeWorkerId ?? m.worker_id,
       };
@@ -235,36 +299,116 @@ export const useStore = create<State>((set, get) => ({
           ? merged.slice(merged.length - MAX_BUS_MESSAGES)
           : merged;
 
-      // Derive worker status from lifecycle bus messages. The server
-      // doesn't push a separate ``worker_status`` event anymore — when
-      // we can read the same information off the bus, we do.
+      // Derive worker state from lifecycle bus messages.
       //
-      // ``BusWorkerReadyMessage`` also rides along ``runner`` /
-      // ``started_at`` / ``bridged`` / ``active`` in its ``data`` payload;
-      // copy those over too so the Worker details pane has them.
+      // ``BusWorkerRegistryMessage`` advertises a runner plus the list of
+      // workers it manages — including remote workers we don't observe.
+      // We register the runner, attach known worker ids, and stub
+      // placeholder Worker entries for any we haven't seen yet so the
+      // tree can show them.
+      //
+      // ``BusWorkerReadyMessage`` carries ``runner`` / ``started_at`` /
+      // ``bridged`` / ``active`` inside ``data`` and also identifies the
+      // owning runner for a worker — the second source of truth for
+      // runner membership.
+      //
+      // The remaining lifecycle messages just update worker.status.
       let workers = s.workers;
+      let workerOrder = s.workerOrder;
       let workersChanged = false;
+      const ensureWorkersCopy = () => {
+        if (!workersChanged) {
+          workers = { ...workers };
+          workerOrder = [...workerOrder];
+          workersChanged = true;
+        }
+      };
       const updateWorker = (id: string, patch: Partial<Worker>) => {
         const existing = workers[id];
         if (!existing) return;
-        if (!workersChanged) {
-          workers = { ...workers };
-          workersChanged = true;
-        }
+        ensureWorkersCopy();
         workers[id] = { ...existing, ...patch };
       };
+
+      let runners = s.runners;
+      let runnerOrder = s.runnerOrder;
+      let runnersChanged = false;
+      const ensureRunnersCopy = () => {
+        if (!runnersChanged) {
+          runners = { ...runners };
+          runnerOrder = [...runnerOrder];
+          runnersChanged = true;
+        }
+      };
+      const ensureRunner = (name: string) => {
+        if (runners[name]) return;
+        ensureRunnersCopy();
+        runners[name] = { name, worker_ids: [], local: false };
+        runnerOrder.push(name);
+      };
+      const attachWorkerToRunner = (workerId: string, runnerName: string) => {
+        ensureRunner(runnerName);
+        const existing = runners[runnerName];
+        if (existing.worker_ids.includes(workerId)) return;
+        ensureRunnersCopy();
+        runners[runnerName] = {
+          ...existing,
+          worker_ids: [...existing.worker_ids, workerId],
+        };
+      };
+      const ensurePlaceholderWorker = (
+        workerId: string,
+        ts: number,
+        parent: string | null,
+        runnerName: string
+      ) => {
+        if (workers[workerId]) return;
+        ensureWorkersCopy();
+        workers[workerId] = placeholderWorker(workerId, ts, parent, runnerName);
+        workerOrder.push(workerId);
+      };
+
       for (const e of events) {
         const mt = e.message_type;
         const data = (e.data ?? {}) as Record<string, unknown>;
         const source = e.source_worker ?? null;
         const target = e.target_worker ?? null;
-        if (mt === "BusWorkerReadyMessage" && source) {
+
+        if (mt === "BusWorkerRegistryMessage") {
+          const runnerName = (data.runner as string | undefined) ?? null;
+          if (!runnerName) continue;
+          ensureRunner(runnerName);
+          const entries = (data.workers as unknown[] | undefined) ?? [];
+          for (const raw of entries) {
+            const entry = raw as Record<string, unknown> | null | undefined;
+            if (!entry) continue;
+            const workerId =
+              typeof entry.name === "string" ? entry.name : undefined;
+            if (!workerId) continue;
+            const parent =
+              typeof entry.parent === "string" ? entry.parent : null;
+            ensurePlaceholderWorker(workerId, e.timestamp, parent, runnerName);
+            attachWorkerToRunner(workerId, runnerName);
+            const w = workers[workerId];
+            if (w && w.runner !== runnerName) {
+              updateWorker(workerId, { runner: runnerName });
+            }
+          }
+        } else if (mt === "BusWorkerReadyMessage" && source) {
           const patch: Partial<Worker> = { status: "ready" };
-          if (typeof data.runner === "string") patch.runner = data.runner;
+          let runnerName: string | undefined;
+          if (typeof data.runner === "string") {
+            runnerName = data.runner;
+            patch.runner = data.runner;
+          }
           if (typeof data.started_at === "number")
             patch.started_at = data.started_at;
           if (typeof data.bridged === "boolean") patch.bridged = data.bridged;
           if (typeof data.active === "boolean") patch.active = data.active;
+          if (runnerName) {
+            ensurePlaceholderWorker(source, e.timestamp, null, runnerName);
+            attachWorkerToRunner(source, runnerName);
+          }
           updateWorker(source, patch);
         } else if (mt === "BusActivateWorkerMessage" && target) {
           updateWorker(target, { status: "active" });
@@ -280,6 +424,28 @@ export const useStore = create<State>((set, get) => ({
           source
         ) {
           updateWorker(source, { status: "errored" });
+        }
+      }
+
+      // A runner is "local" once we own an observer for any worker on
+      // it. Recompute the flag whenever runners or workers changed in
+      // this batch.
+      if (workersChanged || runnersChanged) {
+        const finalWorkers = workers;
+        const finalRunners = runnersChanged ? runners : { ...runners };
+        let anyLocalChanged = false;
+        for (const name of runnerOrder) {
+          const r = finalRunners[name];
+          const local = r.worker_ids.some((id) => finalWorkers[id]?.observed);
+          if (local !== r.local) {
+            finalRunners[name] = { ...r, local };
+            anyLocalChanged = true;
+          }
+        }
+        if (anyLocalChanged) {
+          runners = finalRunners;
+          if (!runnersChanged) runnerOrder = [...runnerOrder];
+          runnersChanged = true;
         }
       }
 
@@ -392,7 +558,14 @@ export const useStore = create<State>((set, get) => ({
 
       const patch: Partial<State> = { busMessages: trimmed };
       if (jobsChanged) patch.jobs = jobs;
-      if (workersChanged) patch.workers = workers;
+      if (workersChanged) {
+        patch.workers = workers;
+        patch.workerOrder = workerOrder;
+      }
+      if (runnersChanged) {
+        patch.runners = runners;
+        patch.runnerOrder = runnerOrder;
+      }
       return patch;
     });
   },
@@ -411,6 +584,8 @@ export const useStore = create<State>((set, get) => ({
       workers: {},
       workerOrder: [],
       activeWorkerId: undefined,
+      runners: {},
+      runnerOrder: [],
       versions: undefined,
       protocol: undefined,
       busMessages: [],
