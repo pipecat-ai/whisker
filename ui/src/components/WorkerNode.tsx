@@ -38,7 +38,10 @@ export function WorkerNode({ workerId, depth, workersByParent }: Props) {
   const remote = !worker.observed;
   const Icon = remote ? Globe : Workflow;
 
-  const headerPad = 12 + depth * 16;
+  // Tightened from ``12 + depth * 16`` once the runner header took over
+  // the top-level row — the previous spacing made first-level workers
+  // feel orphaned from their runner.
+  const headerPad = 8 + depth * 12;
   const childDepth = depth + 1;
 
   return (
