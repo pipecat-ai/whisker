@@ -8,12 +8,13 @@ import { useMemo, useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { BusMessageCategory, BusMessage } from "../types";
 
-const CATEGORY_STYLES: Record<BusMessageCategory, { bg: string; fg: string }> = {
-  lifecycle: { bg: "hsla(220, 80%, 55%, 0.15)", fg: "hsl(220, 80%, 55%)" },
-  frame: { bg: "hsla(280, 60%, 55%, 0.15)", fg: "hsl(280, 60%, 55%)" },
-  job: { bg: "hsla(35, 80%, 50%, 0.15)", fg: "hsl(35, 80%, 50%)" },
-  other: { bg: "hsla(0, 0%, 50%, 0.1)", fg: "hsl(0, 0%, 50%)" },
-};
+const CATEGORY_STYLES: Record<BusMessageCategory, { bg: string; fg: string }> =
+  {
+    lifecycle: { bg: "hsla(220, 80%, 55%, 0.15)", fg: "hsl(220, 80%, 55%)" },
+    frame: { bg: "hsla(280, 60%, 55%, 0.15)", fg: "hsl(280, 60%, 55%)" },
+    job: { bg: "hsla(35, 80%, 50%, 0.15)", fg: "hsl(35, 80%, 50%)" },
+    other: { bg: "hsla(0, 0%, 50%, 0.1)", fg: "hsl(0, 0%, 50%)" },
+  };
 
 export function stripBusPrefix(messageType: string): string {
   return messageType.replace(/^Bus/, "").replace(/Message$/, "");

@@ -244,10 +244,7 @@ export const useStore = create<State>((set, get) => ({
       // copy those over too so the Worker details pane has them.
       let workers = s.workers;
       let workersChanged = false;
-      const updateWorker = (
-        id: string,
-        patch: Partial<Worker>
-      ) => {
+      const updateWorker = (id: string, patch: Partial<Worker>) => {
         const existing = workers[id];
         if (!existing) return;
         if (!workersChanged) {
