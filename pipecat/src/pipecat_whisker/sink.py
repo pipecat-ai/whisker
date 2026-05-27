@@ -9,10 +9,10 @@
 A sink is a :class:`~pipecat.pipeline.base_worker.BaseWorker` that owns
 the per-worker observer registry, captures bus messages, and tracks
 worker lifecycle status. Each event the sink produces (frame /
-``worker_added`` / ``worker_status`` / ``bus_event``) is handed to the
-abstract :meth:`emit` method, which subclasses implement to deliver the
-event to their target — a file, a websocket client, a network stream,
-an HTTP webhook, etc.
+``worker_added`` / ``worker_status`` / ``bus_message``) is handed to
+the abstract :meth:`emit` method, which subclasses implement to
+deliver the event to their target — a file, a websocket client, a
+network stream, an HTTP webhook, etc.
 
 The base does **not** choose a wire encoding. ``emit`` receives the
 event as a plain ``dict``; each sink picks its own serialization
@@ -112,7 +112,7 @@ DEFAULT_EXCLUDE_FRAMES: Tuple[Type[Frame], ...] = (
     BotSpeakingFrame,
 )
 
-# Frame types that are too chatty to forward as bus events. These are
+# Frame types that are too chatty to forward as bus messages. These are
 # applied only to BusFrameMessage; non-frame bus messages always flow.
 DEFAULT_EXCLUDE_BUS_FRAMES: Tuple[Type[Frame], ...] = (
     InputAudioRawFrame,
@@ -121,7 +121,7 @@ DEFAULT_EXCLUDE_BUS_FRAMES: Tuple[Type[Frame], ...] = (
     BotSpeakingFrame,
 )
 
-BUS_EVENT_BUFFER_SIZE = 200
+BUS_MESSAGE_BUFFER_SIZE = 200
 
 _LIFECYCLE_BUS_MESSAGES: Tuple[type, ...] = (
     BusActivateWorkerMessage,
@@ -255,7 +255,7 @@ def _worker_status_from_message(
 class WhiskerSink(BaseWorker):
     """Abstract base for whisker debugger backends.
 
-    Owns the per-worker observer registry, bus event ring buffer, and
+    Owns the per-worker observer registry, bus message ring buffer, and
     worker lifecycle capture. Subclasses implement :meth:`emit` to
     deliver each recorded event to their target.
 
@@ -275,7 +275,7 @@ class WhiskerSink(BaseWorker):
         *,
         serializer: Optional[WhiskerSerializer] = None,
         exclude_bus_frames: Tuple[Type[Frame], ...] = DEFAULT_EXCLUDE_BUS_FRAMES,
-        bus_event_buffer_size: int = BUS_EVENT_BUFFER_SIZE,
+        bus_message_buffer_size: int = BUS_MESSAGE_BUFFER_SIZE,
     ):
         """Initialize the sink.
 
@@ -285,8 +285,8 @@ class WhiskerSink(BaseWorker):
             exclude_bus_frames: Frame types to skip when reporting
                 ``BusFrameMessage``s — applied only to the frame inside
                 the bus message, not to non-frame bus messages.
-            bus_event_buffer_size: Maximum number of recent bus events
-                to retain in the in-memory ring buffer.
+            bus_message_buffer_size: Maximum number of recent bus
+                messages to retain in the in-memory ring buffer.
         """
         super().__init__(name=name)
         self._serializer: WhiskerSerializer = serializer or whisker_serializer
@@ -295,14 +295,14 @@ class WhiskerSink(BaseWorker):
         # Registered observers, keyed by worker name.
         self._observed: Dict[str, _ObservedWorker] = {}
 
-        # Ring buffer of recent bus events; subclasses can read it (for
+        # Ring buffer of recent bus messages; subclasses can read it (for
         # example to replay state to a freshly-connected websocket
         # client).
-        self._bus_events: Deque[dict] = deque(maxlen=bus_event_buffer_size)
+        self._bus_messages: Deque[dict] = deque(maxlen=bus_message_buffer_size)
 
         # Monotonic frame counter included in every frame event so
         # downstream consumers can dedupe / order.
-        self._id = 0
+        self._frame_seq = 0
 
         # True once :meth:`start` has been called. Gates ``emit`` calls
         # so workers registered before the sink is wired up don't fire
@@ -323,7 +323,7 @@ class WhiskerSink(BaseWorker):
         Implementations are responsible for any wire encoding. The
         ``event`` dict carries its own ``"timestamp"`` and ``"type"``
         fields; valid types are ``snapshot``, ``worker_added``,
-        ``worker_status``, ``worker_removed``, ``bus_event``, and any
+        ``worker_status``, ``worker_removed``, ``bus_message``, and any
         of ``frame`` / ``frame:whisker`` / ``frame:whisker-urgent``.
 
         Args:
@@ -393,11 +393,23 @@ class WhiskerSink(BaseWorker):
 
     async def on_frame_pushed(self, worker_name: str, data: FramePushed) -> None:
         """Forward a pushed frame from a per-worker observer."""
-        await self._emit_frame(worker_name, "push", data.source, data.direction, data.frame)
+        await self._emit_frame(
+            worker_name=worker_name,
+            action="push",
+            processor=data.source,
+            direction=data.direction,
+            frame=data.frame,
+        )
 
     async def on_frame_processed(self, worker_name: str, data: FrameProcessed) -> None:
         """Forward a processed frame from a per-worker observer."""
-        await self._emit_frame(worker_name, "process", data.processor, data.direction, data.frame)
+        await self._emit_frame(
+            worker_name=worker_name,
+            action="process",
+            processor=data.processor,
+            direction=data.direction,
+            frame=data.frame,
+        )
 
     # ---- Bus capture -------------------------------------------------------
 
@@ -415,8 +427,8 @@ class WhiskerSink(BaseWorker):
             await super().on_bus_message(message)
             return
 
-        event = self._build_bus_event(message)
-        self._bus_events.append(event)
+        event = self._build_bus_message_event(message)
+        self._bus_messages.append(event)
         await self.emit(event)
 
         await self._maybe_emit_worker_status(message)
@@ -449,7 +461,7 @@ class WhiskerSink(BaseWorker):
             "workers": [self._worker_descriptor(e) for e in self._observed.values()],
         }
 
-    def _build_bus_event(self, message: BusMessage) -> dict:
+    def _build_bus_message_event(self, message: BusMessage) -> dict:
         # Walk the message via the generic serializer; strip source/target so
         # they aren't duplicated alongside the top-level fields.
         payload = whisker_obj_serializer(message)
@@ -457,7 +469,7 @@ class WhiskerSink(BaseWorker):
             payload.pop("source", None)
             payload.pop("target", None)
         return {
-            "type": "bus_event",
+            "type": "bus_message",
             "timestamp": time.time(),
             "message_type": type(message).__name__,
             "category": _categorize_bus_message(message),
@@ -565,21 +577,22 @@ class WhiskerSink(BaseWorker):
 
     async def _emit_frame(
         self,
+        *,
         worker_name: str,
-        event: str,
+        action: str,
         processor: FrameProcessor,
         direction,
         frame: Frame,
     ) -> None:
-        self._id += 1
+        self._frame_seq += 1
         ts = time.time()
         msg = {
             "type": self._frame_type(frame),
-            "id": self._id,
+            "id": self._frame_seq,
             "worker_id": worker_name,
             "name": frame.name,
             "from": processor.name,
-            "event": event,
+            "action": action,
             "direction": direction.name.lower(),
             "timestamp": ts,
             "payload": self._serializer(frame),

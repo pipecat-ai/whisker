@@ -36,7 +36,7 @@ from pipecat.frames.frames import Frame
 from websockets import ConnectionClosedOK, serve
 
 from pipecat_whisker.sink import (
-    BUS_EVENT_BUFFER_SIZE,
+    BUS_MESSAGE_BUFFER_SIZE,
     DEFAULT_EXCLUDE_BUS_FRAMES,
     WhiskerSerializer,
     WhiskerSink,
@@ -65,7 +65,7 @@ class WhiskerServer(WhiskerSink):
         file_name: Optional[str] = None,
         serializer: Optional[WhiskerSerializer] = None,
         exclude_bus_frames: Tuple[Type[Frame], ...] = DEFAULT_EXCLUDE_BUS_FRAMES,
-        bus_event_buffer_size: int = BUS_EVENT_BUFFER_SIZE,
+        bus_message_buffer_size: int = BUS_MESSAGE_BUFFER_SIZE,
     ):
         """Initialize the WhiskerServer.
 
@@ -81,15 +81,15 @@ class WhiskerServer(WhiskerSink):
             serializer: Optional frame serializer override.
             exclude_bus_frames: Frame types to skip when reporting
                 ``BusFrameMessage``s.
-            bus_event_buffer_size: Maximum number of recent bus events
-                to retain server-side for replay to newly connected
-                clients.
+            bus_message_buffer_size: Maximum number of recent bus
+                messages to retain server-side for replay to newly
+                connected clients.
         """
         super().__init__(
             name=name,
             serializer=serializer,
             exclude_bus_frames=exclude_bus_frames,
-            bus_event_buffer_size=bus_event_buffer_size,
+            bus_message_buffer_size=bus_message_buffer_size,
         )
         self._host = host
         self._port = port
@@ -114,9 +114,9 @@ class WhiskerServer(WhiskerSink):
 
         Frames are always queued — the batch is the replay buffer for a
         future client. ``worker_added`` / ``worker_status`` /
-        ``bus_event`` are only queued while a client is currently
+        ``bus_message`` are only queued while a client is currently
         connected; new clients pick them up from the snapshot and the
-        bus-events ring buffer at connect time.
+        bus-message ring buffer at connect time.
         """
         encoded = msgpack.packb(event)
         await self._write_to_file(encoded)
@@ -203,7 +203,7 @@ class WhiskerServer(WhiskerSink):
             # topology before any historical or live events arrive.
             await client.send(msgpack.packb(self.build_snapshot()))
 
-            # Drain accumulated frames + the bus event ring buffer,
+            # Drain accumulated frames + the bus message ring buffer,
             # merged by timestamp, so the UI timeline renders coherently
             # from first paint. After this point we hand the client over
             # to the live send loop.
@@ -223,10 +223,10 @@ class WhiskerServer(WhiskerSink):
             self._client = None
 
     def _collect_backlog(self) -> Optional[bytes]:
-        """Drain ``_batch`` and the bus event ring buffer, merged by timestamp."""
+        """Drain ``_batch`` and the bus message ring buffer, merged by timestamp."""
         items: List[Tuple[float, bytes]] = list(self._batch)
         self._batch = []
-        for event in self._bus_events:
+        for event in self._bus_messages:
             items.append((event["timestamp"], msgpack.packb(event)))
         if not items:
             return None

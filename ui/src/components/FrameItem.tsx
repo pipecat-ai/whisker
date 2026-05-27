@@ -54,7 +54,7 @@ export function FrameItem({ frame, isSelected, onClick }: FrameItemProps) {
             <ArrowDown className="h-4 w-4" />
           )}
           <strong>
-            {frame.event === "process" ? (
+            {frame.action === "process" ? (
               <span className="uppercase">
                 <span className="sr-only md:not-sr-only">Process</span>{" "}
                 <Cpu className="h-3 w-3 inline" />

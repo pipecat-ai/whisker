@@ -7,12 +7,12 @@
 import { useMemo, useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useStore } from "../state.store";
-import { BusEventCategory } from "../types";
-import { BusEventItem, stripBusPrefix } from "./BusEventItem";
+import { BusMessageCategory } from "../types";
+import { BusMessageItem, stripBusPrefix } from "./BusMessageItem";
 import { SearchableFilterDropdown } from "./SearchableFilterDropdown";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 
-const ALL_CATEGORIES: BusEventCategory[] = [
+const ALL_CATEGORIES: BusMessageCategory[] = [
   "lifecycle",
   "frame",
   "job",
@@ -20,7 +20,7 @@ const ALL_CATEGORIES: BusEventCategory[] = [
 ];
 
 const CATEGORY_PILL_STYLES: Record<
-  BusEventCategory,
+  BusMessageCategory,
   { bg: string; fg: string }
 > = {
   lifecycle: { bg: "hsla(220, 80%, 55%, 0.15)", fg: "hsl(220, 80%, 55%)" },
@@ -34,7 +34,7 @@ function CategoryToggle({
   enabled,
   onToggle,
 }: {
-  category: BusEventCategory;
+  category: BusMessageCategory;
   enabled: boolean;
   onToggle: () => void;
 }) {
@@ -54,11 +54,11 @@ function CategoryToggle({
   );
 }
 
-export function BusEvents() {
-  const busEvents = useStore((s) => s.busEvents);
+export function BusMessages() {
+  const busMessages = useStore((s) => s.busMessages);
 
   const [enabledCategories, setEnabledCategories] = useState<
-    Set<BusEventCategory>
+    Set<BusMessageCategory>
   >(() => new Set(ALL_CATEGORIES));
   const [selectedMessageTypes, setSelectedMessageTypes] = useState<Set<string>>(
     () => new Set<string>()
@@ -66,18 +66,18 @@ export function BusEvents() {
 
   const availableMessageTypes = useMemo(() => {
     const s = new Set<string>();
-    for (const e of busEvents) s.add(e.message_type);
+    for (const e of busMessages) s.add(e.message_type);
     return Array.from(s).sort();
-  }, [busEvents]);
+  }, [busMessages]);
 
   const filtered = useMemo(() => {
     if (
       enabledCategories.size === ALL_CATEGORIES.length &&
       selectedMessageTypes.size === 0
     ) {
-      return busEvents;
+      return busMessages;
     }
-    return busEvents.filter((e) => {
+    return busMessages.filter((e) => {
       if (!enabledCategories.has(e.category)) return false;
       if (
         selectedMessageTypes.size > 0 &&
@@ -87,9 +87,9 @@ export function BusEvents() {
       }
       return true;
     });
-  }, [busEvents, enabledCategories, selectedMessageTypes]);
+  }, [busMessages, enabledCategories, selectedMessageTypes]);
 
-  const toggleCategory = (cat: BusEventCategory) => {
+  const toggleCategory = (cat: BusMessageCategory) => {
     setEnabledCategories((curr) => {
       const next = new Set(curr);
       if (next.has(cat)) next.delete(cat);
@@ -147,7 +147,7 @@ export function BusEvents() {
               formatLabel={stripBusPrefix}
             />
             <span className="text-[11px] text-muted-foreground font-normal">
-              {filtered.length} out of {busEvents.length}
+              {filtered.length} out of {busMessages.length}
             </span>
           </div>
           <div className="border border-dashed rounded-lg p-1 overflow-hidden flex flex-col flex-1 min-h-0 my-1">
@@ -158,7 +158,7 @@ export function BusEvents() {
             >
               {filtered.length === 0 ? (
                 <div className="text-muted-foreground text-xs p-2">
-                  {busEvents.length === 0
+                  {busMessages.length === 0
                     ? "No bus messages yet."
                     : "No messages match the current filter."}
                 </div>
@@ -185,7 +185,7 @@ export function BusEvents() {
                           transform: `translateY(${virtualItem.start}px)`,
                         }}
                       >
-                        <BusEventItem event={ev} />
+                        <BusMessageItem event={ev} />
                       </div>
                     );
                   })}

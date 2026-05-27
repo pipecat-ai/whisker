@@ -6,7 +6,7 @@
 
 import { create } from "zustand";
 import {
-  BusEventMessage,
+  BusMessage,
   Connection,
   FrameMessage,
   Job,
@@ -38,7 +38,7 @@ export type Worker = {
   active?: boolean | null;
 };
 
-const MAX_BUS_EVENTS = 1000;
+const MAX_BUS_MESSAGES = 1000;
 
 // Stable empty references so selectors don't trigger re-renders on every call.
 export const EMPTY_PROCESSORS: Record<string, Processor> = Object.freeze(
@@ -91,7 +91,7 @@ type State = {
   versions?: Versions;
   protocol?: string;
 
-  busEvents: BusEventMessage[];
+  busMessages: BusMessage[];
 
   // Derived from BusJob* bus messages — request seeds the entry,
   // response/cancel updates status + completed_at.
@@ -121,7 +121,7 @@ type State = {
   removeWorker: (m: WorkerRemovedMessage) => void;
   setWorkerStatus: (m: WorkerStatusMessage) => void;
   pushFrames: (frames: FrameMessage[]) => void;
-  pushBusEvents: (events: BusEventMessage[]) => void;
+  pushBusMessages: (events: BusMessage[]) => void;
 
   setActiveWorker: (id?: string) => void;
   resetSession: () => void;
@@ -155,7 +155,7 @@ export const useStore = create<State>((set, get) => ({
 
   versions: undefined,
   protocol: undefined,
-  busEvents: [],
+  busMessages: [],
   jobs: {},
 
   selectedProcessor: undefined,
@@ -184,7 +184,7 @@ export const useStore = create<State>((set, get) => ({
       activeWorkerId: workerOrder[0],
       versions: m.server,
       protocol: m.protocol,
-      busEvents: [],
+      busMessages: [],
       jobs: {},
       selectedProcessor: undefined,
       selectedFrame: undefined,
@@ -278,12 +278,12 @@ export const useStore = create<State>((set, get) => ({
     });
   },
 
-  pushBusEvents: (events) => {
+  pushBusMessages: (events) => {
     set((s) => {
-      const merged = s.busEvents.concat(events);
+      const merged = s.busMessages.concat(events);
       const trimmed =
-        merged.length > MAX_BUS_EVENTS
-          ? merged.slice(merged.length - MAX_BUS_EVENTS)
+        merged.length > MAX_BUS_MESSAGES
+          ? merged.slice(merged.length - MAX_BUS_MESSAGES)
           : merged;
 
       // Replay BusJob* messages to keep the derived ``jobs`` map current.
@@ -394,8 +394,8 @@ export const useStore = create<State>((set, get) => ({
       }
 
       return jobsChanged
-        ? { busEvents: trimmed, jobs }
-        : { busEvents: trimmed };
+        ? { busMessages: trimmed, jobs }
+        : { busMessages: trimmed };
     });
   },
 
@@ -415,7 +415,7 @@ export const useStore = create<State>((set, get) => ({
       activeWorkerId: undefined,
       versions: undefined,
       protocol: undefined,
-      busEvents: [],
+      busMessages: [],
       jobs: {},
       selectedProcessor: undefined,
       selectedFrame: undefined,

@@ -49,8 +49,8 @@ export function FrameInspector() {
     }
     filtered = filtered.filter(
       (f) =>
-        (f.event === "push" && showPush) ||
-        (f.event === "process" && showProcess)
+        (f.action === "push" && showPush) ||
+        (f.action === "process" && showProcess)
     );
     filtered = filtered.filter(
       (f) =>

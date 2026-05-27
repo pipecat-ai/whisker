@@ -6,9 +6,9 @@
 
 import { useMemo, useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { BusEventCategory, BusEventMessage } from "../types";
+import { BusMessageCategory, BusMessage } from "../types";
 
-const CATEGORY_STYLES: Record<BusEventCategory, { bg: string; fg: string }> = {
+const CATEGORY_STYLES: Record<BusMessageCategory, { bg: string; fg: string }> = {
   lifecycle: { bg: "hsla(220, 80%, 55%, 0.15)", fg: "hsl(220, 80%, 55%)" },
   frame: { bg: "hsla(280, 60%, 55%, 0.15)", fg: "hsl(280, 60%, 55%)" },
   job: { bg: "hsla(35, 80%, 50%, 0.15)", fg: "hsl(35, 80%, 50%)" },
@@ -31,10 +31,10 @@ function formatTime(timestamp: number): string {
 }
 
 type Props = {
-  event: BusEventMessage;
+  event: BusMessage;
 };
 
-export function BusEventItem({ event }: Props) {
+export function BusMessageItem({ event }: Props) {
   const [expanded, setExpanded] = useState(false);
   const hasData = useMemo(
     () => event.data && Object.keys(event.data).length > 0,

@@ -12,7 +12,7 @@ import { FramePath } from "./components/FramePath";
 import { WorkerTree } from "./components/WorkerTree";
 import { PipelinePanel } from "./components/PipelinePanel";
 import { JobsPanel } from "./components/JobsPanel";
-import { BusEvents } from "./components/BusEvents";
+import { BusMessages } from "./components/BusMessages";
 import { DetailsPanel } from "./components/DetailsPanel";
 import { PipelineGraphDialog } from "./components/PipelineGraphDialog";
 import { usePipecatSocket } from "./hooks.usePipecatSocket";
@@ -88,7 +88,7 @@ export default function App() {
             <div className="flex flex-col min-h-0 overflow-hidden h-full">
               <Group orientation="vertical" className="flex-1 min-h-0">
                 <Panel defaultSize={40} minSize={15}>
-                  <BusEvents />
+                  <BusMessages />
                 </Panel>
                 <Separator className={VERTICAL_HANDLE_CLASS}>
                   <div className={VERTICAL_HANDLE_GRIP_CLASS} />

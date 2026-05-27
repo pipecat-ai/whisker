@@ -37,8 +37,8 @@ export function FramePath() {
         .filter((frame) => frame.name === selectedFrame.name)
         .filter(
           (frame) =>
-            (frame.event === "push" && showPush) ||
-            (frame.event === "process" && showProcess)
+            (frame.action === "push" && showPush) ||
+            (frame.action === "process" && showProcess)
         )
         .map((frame) => ({ processor: proc, frame }));
     });

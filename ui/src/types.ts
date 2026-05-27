@@ -33,7 +33,7 @@ export type FrameMessage = {
   worker_id: string;
   name: string;
   from: string;
-  event: "process" | "push";
+  action: "process" | "push";
   direction: "upstream" | "downstream";
   timestamp: number;
   payload: any;
@@ -90,13 +90,13 @@ export type WorkerStatusMessage = {
   active?: boolean | null;
 };
 
-export type BusEventCategory = "frame" | "job" | "lifecycle" | "other";
+export type BusMessageCategory = "frame" | "job" | "lifecycle" | "other";
 
-export type BusEventMessage = {
-  type: "bus_event";
+export type BusMessage = {
+  type: "bus_message";
   timestamp: number;
   message_type: string;
-  category: BusEventCategory;
+  category: BusMessageCategory;
   source_worker: string | null;
   target_worker: string | null;
   data: any;
@@ -108,7 +108,7 @@ export type ServerMessage =
   | WorkerRemovedMessage
   | WorkerStatusMessage
   | FrameMessage
-  | BusEventMessage;
+  | BusMessage;
 
 // Job lifecycle derived client-side by replaying the BusJob* bus events.
 export type JobStatus =
