@@ -185,6 +185,7 @@ function RunnerSection({
               workerId={id}
               depth={1}
               workersByParent={workersByParent}
+              remote={!local}
             />
           ))}
         </div>
@@ -212,6 +213,7 @@ function UnassignedSection({
             workerId={id}
             depth={1}
             workersByParent={workersByParent}
+            remote={false}
           />
         </Fragment>
       ))}

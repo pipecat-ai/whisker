@@ -15,9 +15,22 @@ type Props = {
   workerId: string;
   depth: number;
   workersByParent: WorkersByParent;
+  /**
+   * Whether the worker belongs to a remote runner. Drives the icon and
+   * muted styling. Workers on a local runner — even ones without an
+   * observer (e.g. the WhiskerSink itself, which is a BaseWorker, not a
+   * PipelineWorker, so it never gets a ``worker_added``) — render as
+   * a regular Workflow node.
+   */
+  remote: boolean;
 };
 
-export function WorkerNode({ workerId, depth, workersByParent }: Props) {
+export function WorkerNode({
+  workerId,
+  depth,
+  workersByParent,
+  remote,
+}: Props) {
   const worker = useStore((s) => s.workers[workerId]);
   const activeWorkerId = useStore((s) => s.activeWorkerId);
   const setActiveWorker = useStore((s) => s.setActiveWorker);
@@ -31,11 +44,6 @@ export function WorkerNode({ workerId, depth, workersByParent }: Props) {
   const hasChildWorkers = childWorkerIds.length > 0;
   const isActive = workerId === activeWorkerId;
   const Chevron = expanded ? ChevronDown : ChevronRight;
-  // Remote workers (those we only know about through
-  // ``BusWorkerRegistryMessage``) render muted and aren't clickable —
-  // we don't have an observer so the pipeline / frames / frame-path
-  // panes have nothing to show.
-  const remote = !worker.observed;
   const Icon = remote ? Globe : Workflow;
 
   // Tightened from ``12 + depth * 16`` once the runner header took over
@@ -99,6 +107,7 @@ export function WorkerNode({ workerId, depth, workersByParent }: Props) {
             workerId={id}
             depth={childDepth}
             workersByParent={workersByParent}
+            remote={remote}
           />
         ))}
     </div>
