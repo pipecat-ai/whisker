@@ -278,8 +278,8 @@ class WhiskerSink(BaseWorker):
         Implementations are responsible for any wire encoding. The
         ``event`` dict carries its own ``"timestamp"`` and ``"type"``
         fields; valid types are ``snapshot``, ``worker_added``,
-        ``worker_removed``, ``bus_message``, and any of ``frame`` /
-        ``frame:whisker`` / ``frame:whisker-urgent``.
+        ``bus_message``, and any of ``frame`` / ``frame:whisker`` /
+        ``frame:whisker-urgent``.
 
         Args:
             event: The wire dict to deliver.

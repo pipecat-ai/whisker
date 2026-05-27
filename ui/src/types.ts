@@ -63,12 +63,6 @@ export type WorkerAddedMessage = {
   parent?: string | null;
 };
 
-export type WorkerRemovedMessage = {
-  type: "worker_removed";
-  timestamp: number;
-  worker_id: string;
-};
-
 export type BusMessageCategory = "frame" | "job" | "lifecycle" | "other";
 
 export type BusMessage = {
@@ -84,7 +78,6 @@ export type BusMessage = {
 export type ServerMessage =
   | SnapshotMessage
   | WorkerAddedMessage
-  | WorkerRemovedMessage
   | FrameMessage
   | BusMessage;
 

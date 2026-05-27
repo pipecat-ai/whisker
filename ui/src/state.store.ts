@@ -17,7 +17,6 @@ import {
   Versions,
   WorkerAddedMessage,
   WorkerDescriptor,
-  WorkerRemovedMessage,
 } from "./types";
 
 type Theme = "light" | "dark";
@@ -112,7 +111,6 @@ type State = {
 
   applySnapshot: (m: SnapshotMessage) => void;
   addWorker: (m: WorkerAddedMessage) => void;
-  removeWorker: (m: WorkerRemovedMessage) => void;
   pushFrames: (frames: FrameMessage[]) => void;
   pushBusMessages: (events: BusMessage[]) => void;
 
@@ -198,24 +196,6 @@ export const useStore = create<State>((set, get) => ({
         workers: { ...s.workers, [m.worker_id]: w },
         workerOrder: [...s.workerOrder, m.worker_id],
         activeWorkerId: s.activeWorkerId ?? m.worker_id,
-      };
-    });
-  },
-
-  removeWorker: (m) => {
-    set((s) => {
-      if (!s.workers[m.worker_id]) return s;
-      const { [m.worker_id]: _, ...rest } = s.workers;
-      const order = s.workerOrder.filter((id) => id !== m.worker_id);
-      const becameActiveless = s.activeWorkerId === m.worker_id;
-      return {
-        workers: rest,
-        workerOrder: order,
-        activeWorkerId: becameActiveless ? order[0] : s.activeWorkerId,
-        // If the active worker went away, drop selections that referenced it.
-        selectedProcessor: becameActiveless ? undefined : s.selectedProcessor,
-        selectedFrame: becameActiveless ? undefined : s.selectedFrame,
-        selectedFramePath: becameActiveless ? undefined : s.selectedFramePath,
       };
     });
   },
