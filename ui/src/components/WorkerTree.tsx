@@ -7,7 +7,6 @@
 import { Fragment, useMemo, useState } from "react";
 import { ChevronDown, ChevronRight, Globe, House } from "lucide-react";
 import { useStore } from "../state.store";
-import { ScrollArea } from "./ui/scroll-area";
 import { WorkerNode, WorkersByParent } from "./WorkerNode";
 
 const UNASSIGNED = "__unassigned__";
@@ -103,32 +102,34 @@ export function WorkerTree() {
   }
 
   return (
-    <ScrollArea className="h-full">
-      <div
-        className="py-1"
-        onKeyDown={handleKeyDown}
-        onFocus={() => setKeyboardFocus("workers")}
-      >
-        {runnerOrder.map((name) => {
-          const runner = runners[name];
-          if (!runner) return null;
-          const byParent = workersByParentByRunner.get(name);
-          const rootIds = byParent?.get(null) ?? [];
-          return (
-            <RunnerSection
-              key={name}
-              runnerName={name}
-              local={runner.local}
-              rootIds={rootIds}
-              workersByParent={byParent}
-            />
-          );
-        })}
-        <UnassignedSection
-          workersByParent={workersByParentByRunner.get(UNASSIGNED)}
-        />
-      </div>
-    </ScrollArea>
+    // Plain ``overflow-y-auto`` div instead of Radix ScrollArea —
+    // Radix's Viewport uses ``display: table`` internally, which lets
+    // rows grow past the viewport width and defeats the ``truncate`` on
+    // worker / runner names.
+    <div
+      className="h-full overflow-y-auto overflow-x-hidden py-1"
+      onKeyDown={handleKeyDown}
+      onFocus={() => setKeyboardFocus("workers")}
+    >
+      {runnerOrder.map((name) => {
+        const runner = runners[name];
+        if (!runner) return null;
+        const byParent = workersByParentByRunner.get(name);
+        const rootIds = byParent?.get(null) ?? [];
+        return (
+          <RunnerSection
+            key={name}
+            runnerName={name}
+            local={runner.local}
+            rootIds={rootIds}
+            workersByParent={byParent}
+          />
+        );
+      })}
+      <UnassignedSection
+        workersByParent={workersByParentByRunner.get(UNASSIGNED)}
+      />
+    </div>
   );
 }
 

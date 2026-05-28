@@ -7,7 +7,6 @@
 import { useMemo } from "react";
 import { useStore } from "../state.store";
 import { Processor } from "../types";
-import { ScrollArea } from "./ui/scroll-area";
 import { ChildrenMap, ProcessorNode } from "./ProcessorNode";
 
 export function PipelinePanel() {
@@ -87,22 +86,24 @@ export function PipelinePanel() {
   const procRoots = processorChildrenMap.get(null) ?? [];
 
   return (
-    <ScrollArea className="h-full">
-      <div
-        className="py-1"
-        onKeyDown={handleKeyDown}
-        onFocus={() => setKeyboardFocus("pipeline")}
-      >
-        {procRoots.map((p) => (
-          <ProcessorNode
-            key={p.id}
-            workerId={worker.worker_id}
-            processor={p}
-            depth={0}
-            childrenMap={processorChildrenMap}
-          />
-        ))}
-      </div>
-    </ScrollArea>
+    // Plain ``overflow-y-auto`` div instead of Radix ScrollArea —
+    // Radix's Viewport uses ``display: table`` internally, which lets
+    // rows grow past the viewport width and defeats the ``truncate`` on
+    // the processor name (pushing the activity arrows out of view).
+    <div
+      className="h-full overflow-y-auto overflow-x-hidden py-1"
+      onKeyDown={handleKeyDown}
+      onFocus={() => setKeyboardFocus("pipeline")}
+    >
+      {procRoots.map((p) => (
+        <ProcessorNode
+          key={p.id}
+          workerId={worker.worker_id}
+          processor={p}
+          depth={0}
+          childrenMap={processorChildrenMap}
+        />
+      ))}
+    </div>
   );
 }
