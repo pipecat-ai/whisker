@@ -168,10 +168,18 @@ export function ProcessorNode({
           className="flex-1 flex items-center gap-1.5 px-1 py-1 text-xs text-left min-w-0 focus:outline-none focus-visible:outline-none"
         >
           <Cpu size={11} className="shrink-0 text-muted-foreground" />
-          <span className="font-mono truncate" title={processor.name}>
+          {/* Name takes the remaining width and truncates; it needs its
+              own ``min-w-0`` so it can shrink below its content width —
+              without it ``truncate`` is a no-op in a flex row and the
+              arrows get shoved out of view. */}
+          <span
+            className="flex-1 min-w-0 font-mono truncate"
+            title={processor.name}
+          >
             {processor.name}
           </span>
-          <span className="ml-auto flex shrink-0 items-center gap-0.5 pr-1.5">
+          {/* Arrows are ``shrink-0`` so they're always visible. */}
+          <span className="flex shrink-0 items-center gap-0.5 pr-1.5">
             <ArrowDown
               size={13}
               strokeWidth={2.75}
