@@ -8,18 +8,20 @@
 
 **Whisker** is a low-level debugger for the [Pipecat](https://github.com/pipecat-ai/pipecat) voice and multimodal conversational AI framework.
 
-It lets you **visualize pipelines and debug frames in real time** — so you can see exactly what your bot is thinking and doing.
+Pipecat is a multi-agent systems: workers spawn sub-workers, send jobs to each other, and exchange messages on a shared bus. Whisker gives you a single view over the whole system so you can see exactly what every part is doing.
 
 With **Whisker** you can:
 
-- 🗺️ View a live graph of your pipeline
-- ⚡ Watch frame processors flash in real time as frames pass through them
-- 📌 Select a processor to inspect the frames it has handled (both pushed and processed)
-- 🔍 Filter frames by name to quickly find the ones you care about
-- 🧵 Select a frame to trace its full path through the pipeline
-- 💾 Save and load previous sessions for review, collaboration, or troubleshooting
+- 🧑‍🤝‍🧑 Browse every worker and sub-worker running in your Pipecat process
+- 🗺️ Inspect the selected worker's pipeline
+- 🧰 See every job flowing between workers
+- 🚌 Follow messages on the Pipecat bus
+- 📌 Select a processor to inspect its frames
+- 🔍 Filter frames by name and direction
+- 🧵 Trace a frame's path through the pipeline
+- 💾 Save and load previous sessions
 
-Think of Whisker as **trace logging with batteries**.
+Think of Whisker as **trace logging with batteries** for Pipecat applications.
 
 <p align="center"><img src="https://raw.githubusercontent.com/pipecat-ai/whisker/refs/heads/main/whisker-image.png" alt="Whisker" width="500"/></p>
 
@@ -40,28 +42,38 @@ uv pip install pipecat-ai-whisker
 
 ### Add Whisker to your Pipecat pipeline
 
-You can add Whisker to your pipeline by just adding an observer to the pipeline task.
+Whisker is split into two pieces: a `WhiskerServer` that owns the WebSocket connection to the UI (and listens on the Pipecat bus for cross-worker events), and per-worker `WhiskerObserver`s that forward frame events to the server. Add one server to your runner and an observer to every pipeline worker you want to debug.
 
 ```python
-from pipecat_whisker import WhiskerObserver
+from pipecat_whisker import WhiskerServer
 
 pipeline = Pipeline(...)
+worker = PipelineWorker(...)
 
-task = PipelineTask(...)
+whisker = WhiskerServer()
+worker.add_observer(whisker.create_observer(worker))
 
-task.add_observer(WhiskerObserver(task.pipeline))
+runner = PipelineRunner()
+await runner.add_workers(whisker, worker)
+await runner.run()
 ```
 
-Starting in Pipecat 0.0.99, it is also possible to add Whisker in an unobtrusive way by using an external pipeline task setup file and adding that file to the `PIPECAT_SETUP_FILES` environment variable.
+You can also add Whisker without touching your application code by listing a setup file in the `PIPECAT_SETUP_FILES` environment variable. The runner picks up `setup_pipeline_runner` (called once for the runner) and each worker picks up `setup_pipeline_worker` (called once per pipeline worker) — both reading from the same file, so a module-level `WhiskerServer` is shared between them:
 
 ```python
-from pipecat_whisker import WhiskerObserver
+from pipecat_whisker import WhiskerServer
+from pipecat.pipeline.runner import PipelineRunner
+from pipecat.pipeline.worker import PipelineWorker
 
-from pipecat.pipeline.task import PipelineTask
+whisker = WhiskerServer()
 
 
-async def setup_pipeline_task(task: PipelineTask):
-    task.add_observer(WhiskerObserver(task.pipeline))
+async def setup_pipeline_runner(runner: PipelineRunner):
+    await runner.add_workers(whisker)
+
+
+async def setup_pipeline_worker(worker: PipelineWorker):
+    worker.add_observer(whisker.create_observer(worker))
 ```
 
 In both cases, this starts the Whisker server that the graphical UI will connect to. By default, the Whisker server runs at:
@@ -108,13 +120,35 @@ The UI will automatically connect to `ws://localhost:9090` by default.
 
 ## 💾 Saving sessions
 
-You can also save your sessions to a file, which is helpful for debugging later or sharing with someone for assistance:
+You can save a Whisker session to a file for later replay or sharing. The on-disk format matches the live wire protocol, so any saved session loads back into the Whisker UI via **Load session**.
+
+Record alongside the live server by passing `file_name=` to `WhiskerServer`:
 
 ```python
-whisker = WhiskerObserver(pipeline, file_name="whisker.bin")
+whisker = WhiskerServer(file_name="whisker.whisk")
 ```
 
-Load the file using the Whisker client.
+For a headless capture without the WebSocket server (CI jobs, scripted recordings), drop in `WhiskerFile` — same wiring as `WhiskerServer`, no port reserved:
+
+```python
+from pipecat_whisker import WhiskerFile
+
+whisker = WhiskerFile("whisker.whisk")
+```
+
+### Custom sinks
+
+`WhiskerServer` and `WhiskerFile` are both concrete `WhiskerSink`s. To stream events to a different backend (HTTP webhook, message queue, custom log format, …), subclass `WhiskerSink` and implement `emit`:
+
+```python
+from pipecat_whisker import WhiskerSink
+
+
+class MyCustomSink(WhiskerSink):
+    async def emit(self, event: dict) -> None:
+        # event is a plain dict — encode and ship it however you like.
+        ...
+```
 
 ## 📚 Next steps
 

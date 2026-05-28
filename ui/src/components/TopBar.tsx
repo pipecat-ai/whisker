@@ -32,7 +32,7 @@ export function TopBar() {
   const connected = useStore((s) => s.connected);
   const url = useStore((s) => s.wsUrl);
   const setUrl = useStore((s) => s.setWsUrl);
-  const resetPipeline = useStore((s) => s.resetPipeline);
+  const resetSession = useStore((s) => s.resetSession);
   const { connect, disconnect } = usePipecatSocket();
   const { loadMessages } = useWhisker();
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -54,11 +54,12 @@ export function TopBar() {
     reader.onload = () => {
       const CLEAR_PIPELINE_MS = 500;
 
-      resetPipeline();
+      resetSession();
 
       // We just give time to Cytoscape to clear everything.
       setTimeout(() => {
-        loadMessages(reader.result);
+        // readAsArrayBuffer guarantees ArrayBuffer here.
+        loadMessages(reader.result as ArrayBuffer);
         e.target.value = "";
       }, CLEAR_PIPELINE_MS);
     };
