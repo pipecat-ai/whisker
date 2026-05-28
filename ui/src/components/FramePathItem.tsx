@@ -85,7 +85,9 @@ export const FramePathItem = React.forwardRef<
             )}
           </strong>
         </div>
-        <strong className="flex-1 min-w-0">#{processor.name}</strong>
+        <strong className="flex-1 min-w-0 truncate" title={processor.name}>
+          #{processor.name}
+        </strong>
         <span className="text-muted-foreground text-xs text-right flex-shrink-0">
           {time}
         </span>

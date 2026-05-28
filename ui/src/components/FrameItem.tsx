@@ -67,7 +67,9 @@ export function FrameItem({ frame, isSelected, onClick }: FrameItemProps) {
             )}
           </strong>
         </div>
-        <strong className="flex-1 min-w-0">#{frame.name}</strong>
+        <strong className="flex-1 min-w-0 truncate" title={frame.name}>
+          #{frame.name}
+        </strong>
         <span className="text-muted-foreground text-xs text-right flex-shrink-0">
           {time}
         </span>
