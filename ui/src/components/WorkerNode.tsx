@@ -4,12 +4,97 @@
 // SPDX-License-Identifier: BSD 2-Clause License
 //
 
-import { useState } from "react";
-import { ChevronDown, ChevronRight, Cog, Workflow } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import {
+  ArrowDown,
+  ArrowUp,
+  ChevronDown,
+  ChevronRight,
+  Cog,
+  Workflow,
+} from "lucide-react";
 import { useStore } from "../state.store";
 import { cn } from "@/lib/utils";
 
 export type WorkersByParent = Map<string | null, string[]>;
+
+const FLASH_MS = 300;
+
+// Aggregate frame activity across all of a worker's processors. Lights
+// the down / up arrow when *any* processor in the pipeline pushes a
+// frame of that direction. Mirrors ``useProcessorActivity`` but folds
+// every processor list together.
+function useWorkerActivity(workerId: string) {
+  const frames = useStore((s) => s.workers[workerId]?.frames);
+  const [active, setActive] = useState({ down: false, up: false });
+  const lastIdRef = useRef<number | null>(null);
+  const timers = useRef<{
+    down?: ReturnType<typeof setTimeout>;
+    up?: ReturnType<typeof setTimeout>;
+  }>({});
+
+  useEffect(() => {
+    if (!frames) return;
+    const lists = Object.values(frames);
+
+    // Newest id = max over each list's head (lists are newest-first), so
+    // this stays O(processors) instead of O(all frames).
+    let newestId = 0;
+    for (const list of lists) {
+      if (list.length > 0 && list[0].id > newestId) newestId = list[0].id;
+    }
+    if (newestId === 0) return;
+
+    // First observation just anchors the cursor — don't flash history.
+    if (lastIdRef.current === null) {
+      lastIdRef.current = newestId;
+      return;
+    }
+    if (newestId <= lastIdRef.current) return;
+
+    let sawDown = false;
+    let sawUp = false;
+    for (const list of lists) {
+      for (const f of list) {
+        if (f.id <= lastIdRef.current) break;
+        if (f.action === "push") {
+          if (f.direction === "downstream") sawDown = true;
+          else sawUp = true;
+        }
+        if (sawDown && sawUp) break;
+      }
+      if (sawDown && sawUp) break;
+    }
+    lastIdRef.current = newestId;
+
+    if (sawDown) {
+      setActive((p) => (p.down ? p : { ...p, down: true }));
+      clearTimeout(timers.current.down);
+      timers.current.down = setTimeout(
+        () => setActive((p) => ({ ...p, down: false })),
+        FLASH_MS
+      );
+    }
+    if (sawUp) {
+      setActive((p) => (p.up ? p : { ...p, up: true }));
+      clearTimeout(timers.current.up);
+      timers.current.up = setTimeout(
+        () => setActive((p) => ({ ...p, up: false })),
+        FLASH_MS
+      );
+    }
+  }, [frames]);
+
+  useEffect(() => {
+    const t = timers.current;
+    return () => {
+      clearTimeout(t.down);
+      clearTimeout(t.up);
+    };
+  }, []);
+
+  return active;
+}
 
 type Props = {
   workerId: string;
@@ -24,6 +109,7 @@ export function WorkerNode({ workerId, depth, workersByParent }: Props) {
   const keyboardFocus = useStore((s) => s.keyboardFocus);
 
   const [expanded, setExpanded] = useState(true);
+  const activity = useWorkerActivity(workerId);
 
   if (!worker) return null;
 
@@ -81,12 +167,44 @@ export function WorkerNode({ workerId, depth, workersByParent }: Props) {
           )}
         >
           <Icon size={12} className="shrink-0 text-muted-foreground" />
-          <span className="font-mono text-xs truncate" title={worker.worker_id}>
-            {worker.worker_id}
+          {/* Name + status share the left side; the name truncates first
+              and the status stays pinned right next to it. */}
+          <span className="flex-1 min-w-0 flex items-center gap-2">
+            <span
+              className="font-mono text-xs truncate min-w-0"
+              title={worker.worker_id}
+            >
+              {worker.worker_id}
+            </span>
+            {worker.status && (
+              <span className="shrink-0 text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+                {worker.status}
+              </span>
+            )}
           </span>
-          {worker.status && (
-            <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
-              {worker.status}
+          {pipelineKnown && (
+            // Aggregate pipeline activity — lights when any processor in
+            // this worker pushes a frame, so you can see traffic in
+            // workers other than the selected one.
+            <span className="flex shrink-0 items-center gap-0.5">
+              <ArrowDown
+                size={13}
+                strokeWidth={2.75}
+                className={cn(
+                  "transition-colors",
+                  activity.down
+                    ? "text-emerald-500"
+                    : "text-muted-foreground/35"
+                )}
+              />
+              <ArrowUp
+                size={13}
+                strokeWidth={2.75}
+                className={cn(
+                  "transition-colors",
+                  activity.up ? "text-amber-500" : "text-muted-foreground/35"
+                )}
+              />
             </span>
           )}
         </button>
