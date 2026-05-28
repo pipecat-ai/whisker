@@ -63,14 +63,24 @@ function JobDurationTicker({
   return <>{formatJobDuration(startedAt, completedAt)}</>;
 }
 
-function Row({ label, value }: { label: string; value: React.ReactNode }) {
+function Row({
+  label,
+  value,
+  title,
+}: {
+  label: string;
+  value: React.ReactNode;
+  title?: string;
+}) {
   if (value === null || value === undefined || value === "") return null;
   return (
     <div className="flex items-baseline gap-3 py-1.5 border-b last:border-b-0">
       <span className="text-[11px] font-medium w-20 shrink-0 text-muted-foreground uppercase tracking-wide">
         {label}
       </span>
-      <span className="text-xs min-w-0 break-words">{value}</span>
+      <span className="text-xs min-w-0 truncate" title={title}>
+        {value}
+      </span>
     </div>
   );
 }
@@ -133,11 +143,13 @@ export function DetailsPanel() {
             <>
               <Row
                 label="ID"
+                title={selectedJob.job_id}
                 value={<span className="font-mono">{selectedJob.job_id}</span>}
               />
               {selectedJob.job_name && (
                 <Row
                   label="Name"
+                  title={selectedJob.job_name}
                   value={
                     <span className="font-mono">{selectedJob.job_name}</span>
                   }
@@ -145,11 +157,13 @@ export function DetailsPanel() {
               )}
               <Row
                 label="Source"
+                title={selectedJob.source}
                 value={<span className="font-mono">{selectedJob.source}</span>}
               />
               {selectedJob.targets.length > 0 && (
                 <Row
                   label="Targets"
+                  title={selectedJob.targets.join(", ")}
                   value={
                     <span className="font-mono">
                       {selectedJob.targets.join(", ")}
@@ -189,20 +203,24 @@ export function DetailsPanel() {
             <>
               <Row
                 label="Name"
+                title={proc.name}
                 value={<span className="font-mono">{proc.name}</span>}
               />
               <Row
                 label="Type"
+                title={proc.type}
                 value={<span className="font-mono">{proc.type}</span>}
               />
               {proc.parent && (
                 <Row
                   label="Parent"
+                  title={proc.parent}
                   value={<span className="font-mono">{proc.parent}</span>}
                 />
               )}
               <Row
                 label="Worker"
+                title={worker.worker_id}
                 value={<span className="font-mono">{worker.worker_id}</span>}
               />
               <Row label="Frames" value={framesLen} />
@@ -211,17 +229,20 @@ export function DetailsPanel() {
             <>
               <Row
                 label="ID"
+                title={worker.worker_id}
                 value={<span className="font-mono">{worker.worker_id}</span>}
               />
               {worker.runner && (
                 <Row
                   label="Runner"
+                  title={worker.runner}
                   value={<span className="font-mono">{worker.runner}</span>}
                 />
               )}
               {worker.parent && (
                 <Row
                   label="Parent"
+                  title={worker.parent}
                   value={<span className="font-mono">{worker.parent}</span>}
                 />
               )}
