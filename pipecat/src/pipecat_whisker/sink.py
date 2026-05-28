@@ -7,11 +7,10 @@
 """WhiskerSink: abstract base for whisker debugger backends.
 
 A sink is a :class:`~pipecat.pipeline.base_worker.BaseWorker` that owns
-the per-worker observer registry, captures bus messages, and tracks
-worker lifecycle status. Each event the sink produces (frame /
-``worker_added`` / ``worker_status`` / ``bus_message``) is handed to
-the abstract :meth:`emit` method, which subclasses implement to
-deliver the event to their target — a file, a websocket client, a
+the per-worker observer registry and captures bus messages. Each event
+the sink produces (frame / ``worker_added`` / ``bus_message``) is
+handed to the abstract :meth:`emit` method, which subclasses implement
+to deliver the event to their target — a file, a websocket client, a
 network stream, an HTTP webhook, etc.
 
 The base does **not** choose a wire encoding. ``emit`` receives the
@@ -32,6 +31,7 @@ Typical wiring through ``PIPECAT_SETUP_FILES``::
 """
 
 import asyncio
+import enum
 import platform
 import sys
 import time
@@ -180,6 +180,8 @@ def whisker_obj_serializer(obj: Any) -> Any:
         return obj.model_dump(exclude_none=True)
     elif isinstance(obj, LLMContext):
         return [whisker_obj_serializer(m) for m in obj.get_messages(truncate_large_values=True)]
+    elif isinstance(obj, enum.Enum):
+        return obj.name
     elif isinstance(obj, (int, float, bool, str)):
         return obj
     else:
