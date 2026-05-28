@@ -96,7 +96,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
         idle_timeout_secs=runner_args.pipeline_idle_timeout_secs,
     )
 
-    whisker = WhiskerServer(file_name="basic-pipeline.bin")
+    whisker = WhiskerServer(file_name="basic-pipeline.whisk")
     worker.add_observer(whisker.create_observer(worker))
 
     @transport.event_handler("on_client_connected")

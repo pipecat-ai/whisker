@@ -125,7 +125,7 @@ You can save a Whisker session to a file for later replay or sharing. The on-dis
 Record alongside the live server by passing `file_name=` to `WhiskerServer`:
 
 ```python
-whisker = WhiskerServer(file_name="whisker.bin")
+whisker = WhiskerServer(file_name="whisker.whisk")
 ```
 
 For a headless capture without the WebSocket server (CI jobs, scripted recordings), drop in `WhiskerFile` — same wiring as `WhiskerServer`, no port reserved:
@@ -133,7 +133,7 @@ For a headless capture without the WebSocket server (CI jobs, scripted recording
 ```python
 from pipecat_whisker import WhiskerFile
 
-whisker = WhiskerFile("whisker.bin")
+whisker = WhiskerFile("whisker.whisk")
 ```
 
 ### Custom sinks
