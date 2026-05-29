@@ -36,3 +36,6 @@ node_modules/
 
 # uv
 .python-version
+
+# Whisker session recordings
+*.whisk
