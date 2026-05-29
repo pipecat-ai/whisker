@@ -45,30 +45,23 @@ uv pip install pipecat-ai-whisker
 Whisker is split into two pieces: a `WhiskerServer` that owns the WebSocket connection to the UI (and listens on the Pipecat bus for cross-worker events), and per-worker `WhiskerObserver`s that forward frame events to the server. Add one server to your runner and an observer to every pipeline worker you want to debug.
 
 ```python
-from pipecat_whisker import WhiskerServer
-
 pipeline = Pipeline(...)
-worker = PipelineWorker(...)
+worker = PipelineWorker(pipeline, ...)
 
 whisker = WhiskerServer()
 worker.add_observer(whisker.create_observer(worker))
 
-runner = PipelineRunner()
+runner = WorkerRunner()
 await runner.add_workers(whisker, worker)
 await runner.run()
 ```
 
-You can also add Whisker without touching your application code by listing a setup file in the `PIPECAT_SETUP_FILES` environment variable. The runner picks up `setup_pipeline_runner` (called once for the runner) and each worker picks up `setup_pipeline_worker` (called once per pipeline worker) — both reading from the same file, so a module-level `WhiskerServer` is shared between them:
+You can also add Whisker without touching your application code by listing a setup file in the `PIPECAT_SETUP_FILES` environment variable. The runner picks up `setup_worker_runner` (called once for the runner) and each worker picks up `setup_pipeline_worker` (called once per pipeline worker) — both reading from the same file, so a module-level `WhiskerServer` is shared between them:
 
 ```python
-from pipecat_whisker import WhiskerServer
-from pipecat.pipeline.runner import PipelineRunner
-from pipecat.pipeline.worker import PipelineWorker
-
 whisker = WhiskerServer()
 
-
-async def setup_pipeline_runner(runner: PipelineRunner):
+async def setup_worker_runner(runner: WorkerRunner):
     await runner.add_workers(whisker)
 
 
@@ -131,8 +124,6 @@ whisker = WhiskerServer(file_name="whisker.whisk")
 For a headless capture without the WebSocket server (CI jobs, scripted recordings), drop in `WhiskerFile` — same wiring as `WhiskerServer`, no port reserved:
 
 ```python
-from pipecat_whisker import WhiskerFile
-
 whisker = WhiskerFile("whisker.whisk")
 ```
 
@@ -141,9 +132,6 @@ whisker = WhiskerFile("whisker.whisk")
 `WhiskerServer` and `WhiskerFile` are both concrete `WhiskerSink`s. To stream events to a different backend (HTTP webhook, message queue, custom log format, …), subclass `WhiskerSink` and implement `emit`:
 
 ```python
-from pipecat_whisker import WhiskerSink
-
-
 class MyCustomSink(WhiskerSink):
     async def emit(self, event: dict) -> None:
         # event is a plain dict — encode and ship it however you like.

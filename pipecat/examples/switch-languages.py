@@ -7,29 +7,32 @@
 
 import os
 
-from deepgram import LiveOptions
 from dotenv import load_dotenv
 from loguru import logger
-from openai.types.chat import ChatCompletionToolParam
+from pipecat.adapters.schemas.function_schema import FunctionSchema
+from pipecat.adapters.schemas.tools_schema import ToolsSchema
 from pipecat.audio.vad.silero import SileroVADAnalyzer
 from pipecat.frames.frames import Frame, LLMRunFrame
 from pipecat.pipeline.parallel_pipeline import ParallelPipeline
 from pipecat.pipeline.pipeline import Pipeline
-from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.worker import PipelineParams, PipelineWorker
 from pipecat.processors.aggregators.llm_context import LLMContext
-from pipecat.processors.aggregators.llm_response_universal import LLMContextAggregatorPair
-from pipecat.processors.aggregators.openai_llm_context import OpenAILLMContext
+from pipecat.processors.aggregators.llm_response_universal import (
+    LLMContextAggregatorPair,
+    LLMUserAggregatorParams,
+)
 from pipecat.processors.filters.function_filter import FunctionFilter
 from pipecat.runner.types import RunnerArguments
 from pipecat.runner.utils import create_transport
 from pipecat.services.cartesia.tts import CartesiaTTSService
-from pipecat.services.deepgram.stt import DeepgramSTTService
+from pipecat.services.deepgram.stt import DeepgramSTTService, LiveOptions
 from pipecat.services.llm_service import FunctionCallParams
 from pipecat.services.openai.llm import OpenAILLMService
+from pipecat.transcriptions.language import Language
 from pipecat.transports.base_transport import BaseTransport, TransportParams
 from pipecat.transports.daily.transport import DailyParams
 from pipecat.transports.websocket.fastapi import FastAPIWebsocketParams
+from pipecat.workers.runner import WorkerRunner
 
 from pipecat_whisker import WhiskerFrame, WhiskerServer
 
@@ -50,6 +53,7 @@ class SwitchLanguage(ParallelPipeline):
         spanish_tts = CartesiaTTSService(
             api_key=os.getenv("CARTESIA_API_KEY"),
             settings=CartesiaTTSService.Settings(
+                language=Language.ES,
                 voice="d4db5fb9-f44b-4bd1-85fa-192e0f0d75f9",  # Spanish-speaking Lady
             ),
         )
@@ -78,9 +82,6 @@ class SwitchLanguage(ParallelPipeline):
         return self.current_language == "Spanish"
 
 
-# We store functions so objects (e.g. SileroVADAnalyzer) don't get
-# instantiated. The function will be called when the desired transport gets
-# selected.
 transport_params = {
     "daily": lambda: DailyParams(
         audio_in_enabled=True,
@@ -114,28 +115,23 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
     )
     llm.register_function("switch_language", tts.switch_language)
 
-    tools = [
-        ChatCompletionToolParam(
-            type="function",
-            function={
-                "name": "switch_language",
-                "description": "Switch to another language when the user asks you to",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "language": {
-                            "type": "string",
-                            "description": "The language the user wants you to speak",
-                        },
-                    },
-                    "required": ["language"],
-                },
+    switch_language_function = FunctionSchema(
+        name="switch_language",
+        description="Switch to another language when the user asks you to",
+        properties={
+            "language": {
+                "type": "string",
+                "description": "The language the user wants you to speak",
             },
-        )
-    ]
-
+        },
+        required=["language"],
+    )
+    tools = ToolsSchema(standard_tools=[switch_language_function])
     context = LLMContext(tools=tools)
-    user_aggregator, assistant_aggregator = LLMContextAggregatorPair(context)
+    user_aggregator, assistant_aggregator = LLMContextAggregatorPair(
+        context,
+        user_params=LLMUserAggregatorParams(vad_analyzer=SileroVADAnalyzer()),
+    )
 
     pipeline = Pipeline(
         [
@@ -180,7 +176,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
         logger.info(f"Client disconnected")
         await runner.cancel()
 
-    runner = PipelineRunner(handle_sigint=runner_args.handle_sigint)
+    runner = WorkerRunner(handle_sigint=runner_args.handle_sigint)
     await runner.add_workers(whisker, worker)
     await runner.run()
 
