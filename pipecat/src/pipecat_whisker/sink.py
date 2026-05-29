@@ -6,7 +6,7 @@
 
 """WhiskerSink: abstract base for whisker debugger backends.
 
-A sink is a :class:`~pipecat.pipeline.base_worker.BaseWorker` that owns
+A sink is a :class:`~pipecat.workers.base_worker.BaseWorker` that owns
 the per-worker observer registry and captures bus messages. Each event
 the sink produces (frame / ``worker_added`` / ``bus_message``) is
 handed to the abstract :meth:`emit` method, which subclasses implement
@@ -23,7 +23,7 @@ Typical wiring through ``PIPECAT_SETUP_FILES``::
 
     sink = WhiskerFile("session.whisk")
 
-    async def setup_pipeline_runner(runner):
+    async def setup_worker_runner(runner):
         await runner.add_workers(sink)
 
     async def setup_pipeline_worker(worker):
@@ -85,10 +85,10 @@ from pipecat.frames.frames import (
 )
 from pipecat.observers.base_observer import FrameProcessed, FramePushed
 from pipecat.pipeline.base_pipeline import BasePipeline
-from pipecat.pipeline.base_worker import BaseWorker
 from pipecat.pipeline.worker import PipelineWorker
 from pipecat.processors.aggregators.llm_context import LLMContext
 from pipecat.processors.frame_processor import FrameProcessor
+from pipecat.workers.base_worker import BaseWorker
 from pydantic import BaseModel
 
 from pipecat_whisker.frames import WhiskerFrame, WhiskerUrgentFrame

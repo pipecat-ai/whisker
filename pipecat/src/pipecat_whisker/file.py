@@ -17,7 +17,7 @@ Typical wiring through ``PIPECAT_SETUP_FILES``::
 
     sink = WhiskerFile("session.whisk")
 
-    async def setup_pipeline_runner(runner):
+    async def setup_worker_runner(runner):
         await runner.add_workers(sink)
 
     async def setup_pipeline_worker(worker):
