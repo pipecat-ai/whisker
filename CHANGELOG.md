@@ -7,6 +7,94 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- towncrier release notes start -->
 
+## [2.0.0] - 2026-05-29
+
+### Added
+
+- Added a pluggable sink architecture for Whisker debugger backends. Third
+  parties plug in custom backends (HTTP webhook, message queue, network stream,
+  ...) by subclassing `WhiskerSink` and implementing `async def emit(self,
+  event: dict)`. The base owns the per-worker observer registry, bus capture,
+  worker lifecycle tracking, snapshot building, and the abstract `emit`
+  extension point — wire encoding is the subclass's choice.
+    - `WhiskerSink`: the abstract base class.
+    - `WhiskerFile`: a file-only sink for headless captures and CI runs. Opens
+      the file on `start()`, writes the current snapshot as the first record,
+      then appends every event as a msgpack record. Drop-in replacement for
+      `WhiskerServer` when you don't need the live UI — no port reserved, no
+      live-client logic.
+  (PR [#23](https://github.com/pipecat-ai/whisker/pull/23))
+
+- Added a jobs panel. `BusJobRequest` / `BusJobResponse` / `BusJobUpdate` /
+  `BusJobCancel` / `BusJobStream*` messages are folded client-side into a
+  derived `jobs` map keyed by `job_id`, surfaced as a global, worker-filterable
+  list with live status (running / completed / cancelled / failed / errored)
+  and a details view that ticks the job's duration until the response arrives.
+  (PR [#23](https://github.com/pipecat-ai/whisker/pull/23))
+
+- Added towncrier-based changelog management. Per-PR fragments under
+  `changelog/` (`{PR}.added.md`, `{PR}.fixed.md`, ...) get rendered into
+  `CHANGELOG.md` via the `generate-changelog` GitHub workflow. The repository's
+  contributing notes describe the eight fragment types (`added` / `changed` /
+  `deprecated` / `removed` / `fixed` / `security` / `performance` / `other`).
+  (PR [#23](https://github.com/pipecat-ai/whisker/pull/23))
+
+- Added a bus messages panel: every `BusMessage` the runner sees is captured
+  and streamed to the UI. Messages can be filtered by category (lifecycle /
+  frame / job / other) and by message type via a searchable dropdown. The most
+  recent 200 events are also kept in a server-side ring buffer and replayed to
+  a fresh client on connect.
+  (PR [#23](https://github.com/pipecat-ai/whisker/pull/23))
+
+- Added worker lifecycle status capture. `WhiskerSink` translates
+  `BusActivateWorkerMessage` / `BusDeactivateWorkerMessage` /
+  `BusEndWorkerMessage` / `BusCancelWorkerMessage` / `BusWorkerReadyMessage` /
+  `BusWorkerErrorMessage` / `BusWorkerLocalErrorMessage` into `worker_status`
+  events (`ready` / `active` / `inactive` / `ended` / `cancelled` / `errored`).
+  `BusWorkerReadyMessage` also rides along the worker's `runner`, `started_at`,
+  `bridged`, and `active` fields so the UI can show them in the worker details
+  pane.
+  (PR [#23](https://github.com/pipecat-ai/whisker/pull/23))
+
+- Added a multi-worker UI. The left column shows a tree of workers +
+  sub-workers, a global list of jobs flowing between them (with a worker
+  filter), and a details pane that adapts to whatever's selected (worker /
+  processor / job). The right column streams bus messages on top and a Pipeline
+  | Frames | Frame-path trio on the bottom, all horizontally resizable. The
+  cytoscape pipeline graph moved to a draggable, resizable, non-modal popup
+  opened from the Pipeline pane header.
+  (PR [#23](https://github.com/pipecat-ai/whisker/pull/23))
+
+### Changed
+
+- Expanded the observer's default `exclude_frames` to also drop
+  `OutputAudioRawFrame` (which covers `TTSAudioRawFrame` by subclass) and
+  `UserSpeakingFrame`. These dominate observer wire traffic on real voice
+  pipelines — TTS streaming audio chunks plus continuous VAD frames, observed
+  at every processor — and almost never carry signal you care about while
+  debugging. `BotStartedSpeakingFrame` / `BotStoppedSpeakingFrame` still flow.
+  Pass an explicit `exclude_frames=...` to `sink.create_observer()` to opt back
+  in.
+  (PR [#23](https://github.com/pipecat-ai/whisker/pull/23))
+
+- ⚠️ Adopted Pipecat's `task` → `worker` rename throughout Whisker.
+  `WhiskerServer.create_observer()` (and `WhiskerSink.create_observer()`) now
+  take a `PipelineWorker`, observers receive `worker_name` instead of
+  `task_name`, and the wire protocol's per-frame `task_id` field became
+  `worker_id`. Setup files should define `setup_pipeline_worker(worker)` (not
+  `setup_pipeline_task(task)`) and register the sink with
+  `runner.add_workers(server)` (not `runner.spawn(server)`).
+  (PR [#23](https://github.com/pipecat-ai/whisker/pull/23))
+
+- ⚠️ Switched the wire protocol to a snapshot + per-worker lifecycle model. A
+  new client receives a single `snapshot` event with `protocol`, runtime
+  versions, and currently-registered workers, followed by live `worker_added` /
+  `worker_status` / `worker_removed` / `frame` / `bus_event` deltas. Per-worker
+  topology now travels inside `worker_added` (no more top-level `pipeline`
+  message), and the recording file format follows the same wire encoding so
+  `WhiskerFile` captures replay through the same UI as a live session.
+  (PR [#23](https://github.com/pipecat-ai/whisker/pull/23))
+
 ## [1.0.0] - 2026-04-14
 
 ### Changed
