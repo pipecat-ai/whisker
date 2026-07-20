@@ -37,6 +37,11 @@ examples = [
 Source = "https://github.com/pipecat-ai/whisker"
 Website = "https://pipecat.ai"
 
+[tool.uv]
+# pillow is a transitive dependency of pipecat-ai (unpinned there); pin it
+# here to pull in the fix for PYSEC-2026-2253 through PYSEC-2026-3453.
+override-dependencies = ["pillow>=12.3.0"]
+
 [dependency-groups]
 dev = [
     "build~=1.2.2",
