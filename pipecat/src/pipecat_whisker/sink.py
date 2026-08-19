@@ -166,12 +166,11 @@ def whisker_obj_serializer(obj: Any) -> Any:
     Returns:
         A JSON-shaped representation of the input.
     """
-    if is_dataclass(obj):
-        return {
-            f.name: whisker_obj_serializer(getattr(obj, f.name))
-            for f in fields(obj)
-            if getattr(obj, f.name) is not None
-        }
+    if is_dataclass(obj) and not isinstance(obj, type):
+        # Read the raw instance state: a field can intercept reads to warn that
+        # it is deprecated, and this walks every field of every frame.
+        values = {f.name: object.__getattribute__(obj, f.name) for f in fields(obj)}
+        return {k: whisker_obj_serializer(v) for k, v in values.items() if v is not None}
     elif isinstance(obj, (list, tuple, set)):
         return [whisker_obj_serializer(v) for v in obj if v is not None]
     elif isinstance(obj, dict):
