@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- towncrier release notes start -->
 
+## [2.0.1] - 2026-08-19
+
+### Fixed
+
+- Fixed deprecation warnings being emitted for every frame sent to Whisker.
+  Deprecated frame fields, such as `StartFrame.audio_in_sample_rate` and its
+  siblings, warn when read, and the serializer read each dataclass field twice
+  while walking every frame. It now reads the raw instance state instead, so no
+  warning is emitted.
+  (PR [#31](https://github.com/pipecat-ai/whisker/pull/31))
+
 ## [2.0.0] - 2026-05-29
 
 ### Added
