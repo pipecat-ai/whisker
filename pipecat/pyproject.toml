@@ -50,7 +50,7 @@ dev = [
     "pyright>=1.1.404,<1.2",
     "python-dotenv>=1.0.1,<2.0.0",
     "ruff>=0.12.11,<1",
-    "setuptools~=78.1.1",
+    "setuptools~=83.0.0",
     "setuptools_scm~=8.3.1",
     "towncrier~=25.8.0",
 ]
