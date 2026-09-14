@@ -40,7 +40,17 @@ Website = "https://pipecat.ai"
 [tool.uv]
 # pillow is a transitive dependency of pipecat-ai (unpinned there); pin it
 # here to pull in the fix for PYSEC-2026-2253 through PYSEC-2026-3453.
-override-dependencies = ["pillow>=12.3.0"]
+# cryptography, pydantic-settings, python-multipart, and starlette are also
+# transitive (via pipecat-ai extras); pin them to pull in fixes for
+# PYSEC-2026-3552/3553/3554 + GHSA-537c-gmf6-5ccf, CVE-2026-58203,
+# PYSEC-2026-3036/3037/3040, and PYSEC-2026-248/249 respectively.
+override-dependencies = [
+    "pillow>=12.3.0",
+    "cryptography>=50.0.0",
+    "pydantic-settings>=2.14.2",
+    "python-multipart>=0.0.31",
+    "starlette>=1.3.1",
+]
 
 [dependency-groups]
 dev = [
