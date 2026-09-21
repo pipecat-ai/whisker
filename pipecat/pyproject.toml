@@ -24,13 +24,13 @@ dependencies = [
     "idna>=3.15",
     "loguru>=0.7.3,<1",
     "msgpack>=1.1.1,<2",
-    "pipecat-ai>=1.10.0",
+    "pipecat-ai>=1.11.0",
     "websockets>=13.1,<16.0",
 ]
 
 [project.optional-dependencies]
 examples = [
-    "pipecat-ai[webrtc,daily,silero,deepgram,cartesia,runner]>=1.10.0"
+    "pipecat-ai[webrtc,daily,silero,deepgram,cartesia,runner]>=1.11.0"
 ]
 
 [project.urls]
@@ -40,7 +40,7 @@ Website = "https://pipecat.ai"
 [tool.uv]
 # pillow is a transitive dependency of pipecat-ai (unpinned there); pin it
 # here to pull in the fix for PYSEC-2026-2253 through PYSEC-2026-3453.
-override-dependencies = ["pillow>=12.3.0"]
+override-dependencies = ["anyio>=4.14.2", "pillow>=12.3.0"]
 
 [dependency-groups]
 dev = [
