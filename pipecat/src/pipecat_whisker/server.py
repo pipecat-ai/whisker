@@ -211,9 +211,12 @@ class WhiskerServer(WhiskerSink):
             # the first watcher sees what happened before they arrived;
             # late-joining clients (after this one) get only live events.
             if not self._first_client_served:
-                if self._pre_connect_buffer:
-                    await client.send(b"".join(self._pre_connect_buffer))
-                self._pre_connect_buffer = []
+                # Events keep landing in the buffer while a send is in
+                # flight, so keep draining until it is empty. Nothing awaits
+                # between the last check and marking the client as served.
+                while self._pre_connect_buffer:
+                    pending, self._pre_connect_buffer = self._pre_connect_buffer, []
+                    await client.send(b"".join(pending))
                 self._first_client_served = True
 
             self._client = client
