@@ -39,8 +39,8 @@ Website = "https://pipecat.ai"
 
 [tool.uv]
 # pillow is a transitive dependency of pipecat-ai (unpinned there); pin it
-# here to pull in the fix for PYSEC-2026-2253 through PYSEC-2026-3453.
-override-dependencies = ["anyio>=4.14.2", "pillow>=12.3.0"]
+# here to pull in the fix for CVE-2026-96636 through CVE-2026-114501.
+override-dependencies = ["anyio>=4.14.2", "pillow>=13.0.0"]
 
 [dependency-groups]
 dev = [
@@ -50,7 +50,7 @@ dev = [
     "pyright>=1.1.404,<1.2",
     "python-dotenv>=1.0.1,<2.0.0",
     "ruff>=0.12.11,<1",
-    "setuptools~=83.0.0",
+    "setuptools~=84.1.0",
     "setuptools_scm~=8.3.1",
     "towncrier~=25.8.0",
 ]
