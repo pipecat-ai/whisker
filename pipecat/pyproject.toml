@@ -23,7 +23,7 @@ dependencies = [
     "aiofiles>=24.1.0,<27",
     "idna>=3.15",
     "loguru>=0.7.3,<1",
-    "msgpack>=1.1.1,<2",
+    "msgpack>=1.2.3,<2",
     "pipecat-ai>=1.11.0",
     "websockets>=13.1,<16.0",
 ]
